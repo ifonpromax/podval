@@ -652,3 +652,122 @@ S('graf3',[
 '.ggg.g.g.g.g',
 '............',
 '............']);
+
+// ----- v3: front/back views for player classes -----
+S('player_front',[
+'....kkkk....',
+'...kSSSSk...',
+'..kSSSSSSk..',
+'..kkkkkkkk..',
+'...kttttk...',
+'...ktetek...',
+'...kttttk...',
+'..kDDDDDDk..',
+'.kwDDDDDDwk.',
+'.kwDDDDDDwk.',
+'..kDDkkDDk..',
+'..kkk..kkk..']);
+S('player_back',[
+'....kkkk....',
+'...kSSSSk...',
+'..kSSSSSSk..',
+'..kSSSSSSk..',
+'...kSSSSk...',
+'...kttttk...',
+'..kDDDDDDk..',
+'.kwDDwwDDwk.',
+'.kwDDwwDDwk.',
+'..kDDDDDDk..',
+'..kDDkkDDk..',
+'..kkk..kkk..']);
+S('mihalych_front',[
+'...kkkkkk...',
+'..khhhhhhk..',
+'.khhhhhhhhk.',
+'..khhhhhhk..',
+'...ktetek...',
+'...kssssk...',
+'..kmmmmmmk..',
+'.ktmmkkmmtk.',
+'.kmmmmmmmmk.',
+'..kmmmmmmk..',
+'..kmmkkmmk..',
+'..kkk..kkk..']);
+S('mihalych_back',[
+'...kkkkkk...',
+'..khhhhhhk..',
+'.khhhhhhhhk.',
+'..khhhhhhk..',
+'...khhhhk...',
+'...kttttk...',
+'..kmmmmmmk..',
+'.kmmmkkmmmk.',
+'.kmmmkkmmmk.',
+'..kmmmmmmk..',
+'..kmmkkmmk..',
+'..kkk..kkk..']);
+S('lyoha_front',[
+'....kkkk....',
+'...khhhhk...',
+'...kttttk...',
+'..kkekkekk..',
+'...kttttk...',
+'..kbbbbbbk..',
+'.kbbbbbbbbk.',
+'.kbbbkkbbbk.',
+'.kbbbbbbbbk.',
+'..kbbbbbbk..',
+'..kDDkkDDk..',
+'..kkk..kkk..']);
+S('lyoha_back',[
+'....kkkk....',
+'...khhhhk...',
+'...khhhhk...',
+'...khhhhk...',
+'...kttttk...',
+'..kbbbbbbk..',
+'.kbkNNNNkbk.',
+'.kbkNNNNkbk.',
+'.kbkNNNNkbk.',
+'..kbkkkkbk..',
+'..kDDkkDDk..',
+'..kkk..kkk..']);
+S('barsik_front',[
+'............',
+'............',
+'..k......k..',
+'..kok..kok..',
+'..kooooook..',
+'..koeooeok..',
+'..koooxook..',
+'...koooook..',
+'..kooooook..',
+'..kooYYook..',
+'..kooooook..',
+'..kkokkokk..']);
+S('barsik_back',[
+'............',
+'............',
+'..k......k..',
+'..kok..kok..',
+'..kooooook..',
+'..kooooook..',
+'..kooooook..',
+'..kooYYook..',
+'..kooYYook..',
+'..kooooook..',
+'..kkokkokk..',
+'.....k......']);
+
+// walk frame: body lifted 1px, legs staggered
+function sprWalk(name){
+  const s=SPR[name]; if(!s) return sprCanvas(name);
+  if(!s.wk){
+    const src=sprCanvas(name); const c=document.createElement('canvas'); c.width=TS; c.height=TS; const g=c.getContext('2d');
+    g.drawImage(src,0,0,TS,10,0,-1+1,TS,10); // body rows 0-9 (keep y, legs move)
+    g.drawImage(src,0,10,TS,1,1,10,TS,1);   // row 10 shifted right
+    g.drawImage(src,0,11,TS,1,-1,11,TS,1);  // row 11 shifted left
+    s.wk=c;
+  }
+  return s.wk;
+}

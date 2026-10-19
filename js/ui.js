@@ -12,6 +12,7 @@ const UI={
     E['b-down'].onclick=()=>{ AU.init(); tryDescend(); };
     E['b-ab'].onclick=()=>{ AU.init(); useAbility(); };
     E['b-sound'].onclick=()=>{ AU.init(); const on=AU.toggle(); E['b-sound'].textContent=on?'♪':'✕'; E['b-sound'].classList.toggle('off',!on); };
+    E['b-eye'].onclick=()=>{ RD.memory=!RD.memory; E['b-eye'].classList.toggle('off',!RD.memory); E['b-eye'].title=RD.memory?'Показана разведанная карта (V)':'Только то, что видно сейчас (V)'; if(G.state==='play') msg(RD.memory?'Показываю разведанную карту.':'Показываю только то, что видно сейчас.','sys'); };
     window.addEventListener('keydown',e=>this.key(e));
     const cv=E.game; let pd=null;
     cv.addEventListener('pointerdown',e=>{ pd={x:e.clientX,y:e.clientY,t:performance.now()}; cv.setPointerCapture(e.pointerId); });
@@ -62,7 +63,7 @@ const UI={
       case 'KeyX': e.preventDefault(); AU.init(); if(G.path){G.path=null;G.exploring=false;this.hud();} else explore(); break;
       case 'Escape': G.path=null; G.exploring=false; this.hud(); break;
       case 'KeyM': this.el['b-sound'].onclick(); break;
-      default: { const d=code.match(/^Digit(\d)$/); if(d){ const n=d[1]==='0'?9:parseInt(d[1])-1; AU.init(); useItem(n); } }
+      case 'KeyV': e.preventDefault(); this.el['b-eye'].onclick(); break;
     }
   },
   icon(spr){ if(!this.icons[spr]) this.icons[spr]=sprCanvas(spr).toDataURL(); return `<img class="ic" src="${this.icons[spr]}" alt="">`; },
@@ -100,13 +101,14 @@ const UI={
   renderInv(){
     const p=G.p; const E=this.el;
     const row=(d,i)=>{ let act='',stat=''; if(d.kind==='weapon'){act='Взять';stat=`+${d.atk} атк`;} else if(d.kind==='armor'){act='Надеть';stat=`+${d.def} защ`;} else if(d.kind==='scroll'){act='Прочитать';stat=d.desc;} else {act=d.kind==='food'?'Съесть':'Выпить';stat=d.desc;}
-      return `<div class="row"><span class="num">${(i+1)%10}</span>${this.icon(d.spr)}<div class="nm">${d.name}<small>${stat}</small></div><button data-use="${i}">${act}</button><button class="drop" data-drop="${i}" title="Выбросить">✕</button></div>`; };
+      return `<div class="row"><span class="num">${isTouch?'':'['+((i+1)%10)+']'}</span>${this.icon(d.spr)}<div class="nm">${d.name}<small>${stat}</small></div><button data-use="${i}">${act}</button><button class="drop" data-drop="${i}" title="Выбросить">✕</button></div>`; };
     const ab=p.cls.ab;
     E.overlay.innerHTML=`<div class="panel inv">
       <h2>${this.icon(p.spr)}${p.name} <small>рюкзак ${p.inv.length}/10</small></h2>
       <div class="eq"><div>${p.weapon?this.icon(p.weapon.spr)+p.weapon.name+' <small>+'+p.weapon.atk+' атк</small>':'<span class="dim">'+(p.cls.id==='barsik'?'когти':'кулаки')+'</span>'}</div><div>${p.armor?this.icon(p.armor.spr)+p.armor.name+' <small>+'+p.armor.def+' защ</small>':'<span class="dim">'+(p.cls.noArmor?'шерсть':'футболка')+'</span>'}</div></div>
       <div class="stats">HP ${p.hp}/${p.hpMax} · атака ${playerAtk()} · защита ${playerDef()} · скорость ${p.spd} · ур.${p.lvl} (${p.xp}/${xpNeed(p.lvl)} xp)<br>этаж ${G.floor} · ход ${G.turn} · убито ${G.kills}<br><b>${ab.name}</b> (F): ${ab.desc}${p.cd?' · ещё '+p.cd+' ход.':' · готово'}</div>
       <div class="list">${p.inv.length?p.inv.map(row).join(''):'<div class="dim">Пусто. Подбирай всё, что блестит.</div>'}</div>
+      ${p.inv.length&&!isTouch?'<div class="dim" style="font-size:7px">Цифры работают только пока открыт рюкзак. Shift+цифра: выбросить.</div>':''}
       <button class="big close">Закрыть</button>
     </div>`;
     E.overlay.querySelectorAll('[data-use]').forEach(b=>b.onclick=()=>{ AU.init(); useItem(+b.dataset.use); if(this.open==='inv'){ if(G.p.inv.length) this.renderInv(); else this.closeOverlay(); } });
@@ -118,7 +120,7 @@ const UI={
     const p=G.p,E=this.el,sh=G.shop; if(!sh) return;
     const cat=p.cls.id==='barsik';
     const row=(s,i)=>{ const stat=s.def.kind==='weapon'?`+${s.def.atk} атк`:s.def.kind==='armor'?`+${s.def.def} защ`:s.def.desc; const can=s.qty>0&&p.gold>=s.price&&p.inv.length<10;
-      return `<div class="row"><span class="num">${(i+1)%10}</span>${this.icon(s.def.spr)}<div class="nm">${s.def.name}<small>${stat}${s.qty>1?' · x'+s.qty:''}</small></div><span class="price ${p.gold<s.price?'no':''}">${s.price} ₽</span><button data-buy="${i}" ${can?'':'disabled'}>${s.qty>0?'Купить':'Нет'}</button></div>`; };
+      return `<div class="row"><span class="num">${isTouch?'':'['+((i+1)%10)+']'}</span>${this.icon(s.def.spr)}<div class="nm">${s.def.name}<small>${stat}${s.qty>1?' · x'+s.qty:''}</small></div><span class="price ${p.gold<s.price?'no':''}">${s.price} ₽</span><button data-buy="${i}" ${can?'':'disabled'}>${s.qty>0?'Купить':'Нет'}</button></div>`; };
     const sell=(d,i)=>`<div class="row"><span class="num"></span>${this.icon(d.spr)}<div class="nm">${d.name}</div><span class="price">${sellPrice(d)} ₽</span><button data-sell="${i}">Продать</button></div>`;
     E.overlay.innerHTML=`<div class="panel inv shop">
       <h2>Ларёк «24 часа» <small>у тебя ${p.gold} ₽</small></h2>
@@ -150,7 +152,7 @@ const UI={
       <button class="big daily">Забег дня</button>
       ${b.runs?`<div class="best">Лучший этаж: ${b.floor} · рекорд: ${b.score} · забегов: ${b.runs}${b.wins?' · побед: '+b.wins:''}</div>`:''}
       ${runs.length?`<div class="runs">${runs.map(r=>`<div><span>${clsName(r.cls)}</span><span>${r.win?'<b>победа</b>':'этаж '+r.floor+', '+r.cause}</span><span>${r.score}${r.daily?' ☀':''}</span></div>`).join('')}</div>`:''}
-      <div class="help">${isTouch?'Тап по клетке: идти. Свайп: шаг. Тап по себе: ждать.<br>Враг рядом: шагни в него.':'WASD / стрелки / нумпад: шаг. QEZC: по диагонали.<br>Пробел: ждать · Enter: спуск · F: способность · I: рюкзак · X: обшарить · 1-9: предметы · Tab: карта'}</div>
+      <div class="help">${isTouch?'Тап по клетке: идти. Свайп: шаг. Тап по себе: ждать.<br>Враг рядом: шагни в него.':'WASD / стрелки / нумпад: шаг. QEZC: по диагонали.<br>Пробел: ждать · Enter: спуск · F: способность · I: рюкзак (в нём цифры = предметы) · X: обшарить · Tab: миникарта · V: только видимое'}</div>
     </div>`;
     const showDesc=()=>{ const c=this.cls; E.overlay.querySelector('.cdesc').innerHTML=`<b>${c.name}.</b> ${c.desc}<br><span class="ab">${c.ab.name}</span>: ${c.ab.desc} (кд ${c.ab.cd}).`; E.overlay.querySelectorAll('.cls').forEach(el=>el.classList.toggle('sel',el.dataset.cls===c.id)); };
     showDesc();

@@ -32,8 +32,10 @@
   #ad{display:flex;gap:10px;color:var(--dim);text-shadow:1px 1px 0 #000}
   #equip{display:flex;gap:4px}#equip img.ic{margin:0;width:24px;height:24px;background:#1b1826;border:2px solid var(--line)}
   .slot{width:24px;height:24px;background:#1b1826;border:2px solid var(--line);display:inline-block}
-  #b-sound{pointer-events:auto;background:none;border:2px solid var(--line);color:var(--dim);font:12px var(--font);width:28px;height:28px;padding:0;cursor:pointer}
+  #b-sound,#b-eye{pointer-events:auto;background:none;border:2px solid var(--line);color:var(--dim);font:12px var(--font);width:28px;height:28px;padding:0;cursor:pointer}
   #b-sound.off{text-decoration:line-through}
+  #b-eye{font-size:14px;line-height:1}#b-eye.off{opacity:.4;border-style:dashed}
+  .inv .row .num{width:22px}
   #status{display:flex;gap:6px;justify-content:center;padding:4px 0}
   .st{font-size:9px;padding:3px 5px;border:2px solid var(--line);background:#1b1826cc}
   #bossbar{width:min(360px,70vw);text-align:center;color:var(--red);font-size:10px;text-shadow:1px 1px 0 #000;margin-top:4px}
@@ -113,7 +115,7 @@
     </div>
     <div id="floor"></div>
     <div id="right">
-      <div style="display:flex;gap:8px;align-items:center"><div id="gold"></div><button id="b-sound" title="Звук (M)">♪</button></div>
+      <div style="display:flex;gap:8px;align-items:center"><div id="gold"></div><button id="b-eye" title="Показана разведанная карта (V)">👁</button><button id="b-sound" title="Звук (M)">♪</button></div>
       <div id="ad"><span id="atk"></span><span id="def"></span></div>
       <div id="equip"></div>
     </div>
