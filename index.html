@@ -122,6 +122,8 @@
 <script src="js/game.js"></script>
 <script src="js/render.js"></script>
 <script src="js/ui.js"></script>
-<script>if(location.search.includes('dev')){const s=document.createElement('script');s.src='js/bot.js';document.body.appendChild(s);}</script>
+<script>
+(()=>{ const c=document.createElement('canvas'); c.width=c.height=48; const g=c.getContext('2d'); g.imageSmoothingEnabled=false; g.drawImage(sprCanvas('player'),0,0,48,48); const l=document.createElement('link'); l.rel='icon'; l.href=c.toDataURL(); document.head.appendChild(l); })();
+if(location.search.includes('dev')){const s=document.createElement('script');s.src='js/bot.js';document.body.appendChild(s);}</script>
 </body>
 </html>

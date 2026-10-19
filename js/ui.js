@@ -52,7 +52,8 @@ const UI={
     switch(code){
       case 'Space': case 'Period': case 'Numpad5': e.preventDefault(); AU.init(); if(e.shiftKey&&code==='Period') tryDescend(); else wait(); break;
       case 'Enter': case 'NumpadEnter': e.preventDefault(); AU.init(); tryDescend(); break;
-      case 'KeyI': case 'Tab': e.preventDefault(); this.toggleInv(); break;
+      case 'KeyI': e.preventDefault(); this.toggleInv(); break;
+      case 'Tab': e.preventDefault(); RD.mini=!RD.mini; break;
       case 'KeyX': e.preventDefault(); AU.init(); if(G.path){G.path=null;G.exploring=false;} else explore(); break;
       case 'Escape': G.path=null; G.exploring=false; break;
       case 'KeyM': this.el['b-sound'].onclick(); break;
@@ -134,7 +135,7 @@ const UI={
       <p>Восемь этажей вниз. Крысы, гопники, бабки и Управдом, который начислит пеню.<br>Умер, значит умер. Заново.</p>
       ${b.runs?`<div class="best">Лучший этаж: ${b.floor} · рекорд: ${b.score} · забегов: ${b.runs}${b.wins?' · побед: '+b.wins:''}</div>`:''}
       <button class="big start">Спуститься</button>
-      <div class="help">${isTouch?'Тап по клетке: идти. Свайп: шаг. Тап по себе: ждать.<br>Враг рядом: шагни в него.':'WASD / стрелки / нумпад: шаг. QEZC: по диагонали.<br>Пробел: ждать · Enter: спуск · I: рюкзак · X: обшарить этаж · 1-9: предметы'}</div>
+      <div class="help">${isTouch?'Тап по клетке: идти. Свайп: шаг. Тап по себе: ждать.<br>Враг рядом: шагни в него.':'WASD / стрелки / нумпад: шаг. QEZC: по диагонали.<br>Пробел: ждать · Enter: спуск · I: рюкзак · X: обшарить этаж · 1-9: предметы · Tab: карта'}</div>
     </div>`;
     E.overlay.querySelector('.start').onclick=()=>{ AU.init(); this.closeOverlay(); E.hud.classList.remove('hidden'); newGame(); };
   },

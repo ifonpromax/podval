@@ -1,5 +1,5 @@
 'use strict';
-const RD={cv:null,g:null,W:0,H:0,sc:3,tz:36,dpr:1,cam:{x:0,y:0},last:0,time:0,tiles:{},pathT:0,vig:null};
+const RD={cv:null,g:null,W:0,H:0,sc:3,tz:36,dpr:1,cam:{x:0,y:0},last:0,time:0,tiles:{},pathT:0,vig:null,mini:true};
 
 function initRender(){
   RD.cv=document.getElementById('game'); RD.g=RD.cv.getContext('2d');
@@ -129,6 +129,20 @@ function draw(){
   if(!RD.vig){ const c=document.createElement('canvas'); c.width=W; c.height=H; const cg=c.getContext('2d'); const gr=cg.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35,W/2,H/2,Math.max(W,H)*0.75); gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,0.75)'); cg.fillStyle=gr; cg.fillRect(0,0,W,H); RD.vig=c; }
   g.drawImage(RD.vig,0,0,W,H);
   if(G.state==='dead'){ g.fillStyle='rgba(120,0,0,0.25)'; g.fillRect(0,0,W,H); }
+  if(RD.mini){
+    const ms=W<600?2:3, mw=MW*ms, mh=MH*ms, mx=W-mw-10, my=(W<600?96:92);
+    g.fillStyle='rgba(0,0,0,0.55)'; g.fillRect(mx-3,my-3,mw+6,mh+6);
+    const TH=THEMES[G.floor];
+    for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
+      const i=idx(x,y); if(!m.seen[i]) continue; const t=m.t[i]; let c;
+      if(t===T.WALL) c=TH.wallTop; else if(t===T.DOOR||t===T.DOOR_OPEN) c='#c08a40'; else if(t===T.STAIRS) c='#f3c53a'; else if(t===T.KIOSK) c='#5ad0e8'; else c=TH.floor;
+      g.globalAlpha=m.vis[i]?1:0.55; g.fillStyle=c; g.fillRect(mx+x*ms,my+y*ms,ms,ms);
+    }
+    g.globalAlpha=1;
+    for(const it of G.items){ if(m.seen[idx(it.x,it.y)]){ g.fillStyle=it.def.kind==='gold'?'#f3c53a':'#ffffff'; g.fillRect(mx+it.x*ms,my+it.y*ms,ms,ms); } }
+    for(const a of G.mons){ if(m.vis[idx(a.x,a.y)]){ g.fillStyle=a.boss?'#ff40ff':'#ff4040'; g.fillRect(mx+a.x*ms,my+a.y*ms,ms,ms); } }
+    if(Math.sin(RD.time*8)>-0.3){ g.fillStyle='#ffffff'; g.fillRect(mx+p.x*ms-1,my+p.y*ms-1,ms+2,ms+2); }
+  }
   g.font=`${Math.max(10,sc*4)}px "Press Start 2P", monospace`; g.textAlign='center';
   for(const f of FX.floats){ const a=1-f.t; g.globalAlpha=a; const fx=sx(f.x)+tz/2, fy=sy(f.y)-f.t*tz*0.9; g.fillStyle='#14121c'; g.fillText(f.text,fx+2,fy+2); g.fillStyle=f.color; g.fillText(f.text,fx,fy); } g.globalAlpha=1;
 }
