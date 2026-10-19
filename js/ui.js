@@ -47,7 +47,8 @@ const UI={
       const d=code.match(/^(?:Digit|Numpad)(\d)$/); if(d){ const n=d[1]==='0'?9:parseInt(d[1])-1; if(e.shiftKey) dropItem(n); else useItem(n); this.renderInv(); if(!G.p.inv.length) this.closeOverlay(); e.preventDefault(); }
       return;
     }
-    if(this.open==='ach'){ if(code==='Escape'){ this.showTitle(); e.preventDefault(); } return; }
+    if(this.open==='ach'||this.open==='board'){ if(code==='Escape'){ this.showTitle(); e.preventDefault(); } return; }
+    if(e.target&&e.target.tagName==='INPUT') return;
     if(this.open==='shop'){
       if(code==='Escape'){ this.closeOverlay(); e.preventDefault(); return; }
       const d=code.match(/^(?:Digit|Numpad)(\d)$/); if(d){ const n=d[1]==='0'?9:parseInt(d[1])-1; buyItem(n); this.renderShop(); e.preventDefault(); }
@@ -176,6 +177,8 @@ const UI={
       ${saved?`<button class="big cont">Продолжить: ${clsName(saved.p.cls)}, этаж ${saved.floor}</button>`:''}
       <button class="big start">Спуститься</button>
       <button class="big daily">Забег дня</button>
+      <div class="bsum dim">…</div>
+      <button class="big ghost boardb">Таблица дня</button>
       <button class="big ghost achb">Достижения ${Object.keys(loadAch()).filter(k=>ACH.some(a=>a.id===k)).length}/${ACH.length}</button>
       ${b.runs?`<div class="best">Лучший этаж: ${b.floor} · рекорд: ${b.score} · забегов: ${b.runs}${b.wins?' · побед: '+b.wins:''}</div>`:''}
       ${runs.length?`<div class="runs">${runs.map(r=>`<div><span>${clsName(r.cls)}</span><span>${r.win?'<b>победа</b>':'этаж '+r.floor+', '+r.cause}</span><span>${r.score}${r.daily?' ☀':''}</span></div>`).join('')}</div>`:''}
@@ -188,14 +191,41 @@ const UI={
     E.overlay.querySelector('.start').onclick=()=>start(false);
     E.overlay.querySelector('.daily').onclick=()=>start(true);
     E.overlay.querySelector('.achb').onclick=()=>this.showAch();
+    E.overlay.querySelector('.boardb').onclick=()=>this.showBoard();
+    const bs=E.overlay.querySelector('.bsum');
+    boardFetch(todayKey()).then(j=>{ if(!bs.isConnected) return; bs.textContent=j.count?`сегодня в таблице: ${j.count} · лидер: ${j.top[0].name} (${j.top[0].score})`:'сегодня в таблице пока никого'; }).catch(()=>{ if(bs.isConnected) bs.textContent='таблица дня недоступна'; });
     const cont=E.overlay.querySelector('.cont'); if(cont) cont.onclick=()=>{ AU.init(); this.closeOverlay(); if(!loadRun()) this.showTitle(); };
   },
   endPanel(title,lines){
     const E=this.el; this.open='end'; E.overlay.hidden=false; AU.setBoss(false);
-    E.overlay.innerHTML=`<div class="panel end"><div class="logo small">${title}</div>${lines}<button class="big start">Ещё раз</button><button class="big share">Поделиться</button><button class="big ghost menu">В меню</button></div>`;
+    E.overlay.innerHTML=`<div class="panel end"><div class="logo small">${title}</div>${lines}${G.daily?'<div class="boardbox"></div>':''}<button class="big start">Ещё раз</button><button class="big share">Поделиться</button><button class="big ghost menu">В меню</button></div>`;
+    if(G.daily) this.renderBoardBox(E.overlay.querySelector('.boardbox'));
     E.overlay.querySelector('.start').onclick=()=>{ AU.init(); this.closeOverlay(); newGame(this.cls,!!G.daily); };
     E.overlay.querySelector('.menu').onclick=()=>{ this.showTitle(); };
     E.overlay.querySelector('.share').onclick=()=>{ const t=shareText(); const tg=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.openTelegramLink; if(tg&&Telegram.WebApp.initData){ Telegram.WebApp.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent('https://ifonpromax.github.io/podval/')+'&text='+encodeURIComponent(t)); } else if(navigator.share){ navigator.share({text:t}).catch(()=>{}); } else { navigator.clipboard&&navigator.clipboard.writeText(t); E.overlay.querySelector('.share').textContent='Скопировано'; } };
+  },
+  boardRows(top,me){
+    const clsIcon=id=>{ const c=CLASSES.find(c=>c.id===id)||CLASSES[0]; return this.icon(c.spr); };
+    return `<div class="brows">${top.map((e,i)=>`<div class="${me&&e.name.toLowerCase()===me.toLowerCase()?'me':''}"><span class="rk">${i+1}</span>${clsIcon(e.cls)}<span class="nm">${e.name.replace(/</g,'&lt;')}</span><span class="fl">${e.win?'победа':'эт.'+e.floor}</span><span class="sc">${e.score}</span></div>`).join('')||'<div class="dim">Пока никого. Будь первым.</div>'}</div>`;
+  },
+  renderBoardBox(box){
+    const day=G.daily; const sent=G.boardSent;
+    const name=playerName();
+    box.innerHTML=`<div class="bhead">Таблица дня</div>${sent?'':`<div class="brow-in"><input id="nick" maxlength="16" placeholder="Твой ник" value="${name.replace(/"/g,'')}"><button class="send">Отправить</button></div>`}<div class="bl dim">${sent?'Загружаю…':'Отправь результат, чтобы попасть в таблицу.'}</div>`;
+    const list=box.querySelector('.bl');
+    const load=async(res)=>{ try{ const j=res||await boardFetch(day); list.className='bl'; list.innerHTML=(j.rank?`<div class="dim" style="font-size:8px">Твоё место: <b>${j.rank}</b> из ${j.count}</div>`:'')+this.boardRows(j.top,playerName()); }catch(e){ list.innerHTML='<span class="dim">Таблица недоступна: '+(e.message||e)+'</span>'; } };
+    if(sent) load(G.boardRes);
+    const btn=box.querySelector('.send');
+    if(btn) btn.onclick=async()=>{ const n=(box.querySelector('#nick').value||'').trim().slice(0,16); if(!n){ box.querySelector('#nick').focus(); return; } setPlayerName(n); btn.disabled=true; btn.textContent='…'; try{ const j=await boardSubmit(day,{name:n,score:score(),cls:G.p.cls.id,floor:G.floor,win:G.win,kills:G.kills,turn:G.turn}); G.boardSent=true; G.boardRes=j; this.renderBoardBox(box); }catch(e){ btn.disabled=false; btn.textContent='Отправить'; list.innerHTML='<span class="dim">Не отправилось: '+(e.message||e)+'. Попробуй ещё.</span>'; } };
+    const inp=box.querySelector('#nick'); if(inp) inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') btn.click(); };
+  },
+  showBoard(){
+    const E=this.el; this.open='board'; E.overlay.hidden=false;
+    const day=todayKey();
+    E.overlay.innerHTML=`<div class="panel inv"><h2>Таблица дня <small>${String(day).replace(/(\d{4})(\d\d)(\d\d)/,'$3.$2.$1')}</small></h2><div class="bl dim">Загружаю…</div><p class="dim" style="font-size:7px">У всех сегодня одно подземелье. Результат попадает сюда после забега дня.</p><button class="big close">Назад</button></div>`;
+    E.overlay.querySelector('.close').onclick=()=>this.showTitle();
+    const list=E.overlay.querySelector('.bl');
+    boardFetch(day).then(j=>{ list.className='bl'; list.innerHTML=this.boardRows(j.top,playerName()); }).catch(e=>{ list.innerHTML='<span class="dim">Таблица недоступна: '+(e.message||e)+'</span>'; });
   },
   showDeath(){
     if(G.state!=='dead') return;

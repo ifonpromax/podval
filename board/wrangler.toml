@@ -1,0 +1,14 @@
+# ПОДВАЛ — daily leaderboard (Cloudflare Worker + Durable Object).
+# *.workers.dev TLS is DPI-blocked by Russian ISPs, so the game talks to it through the
+# Deno Deploy proxy of petuh-relay (https://petuh-vs-kot.ifonpromax.deno.net/podval/board/...).
+name = "podval-board"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+[[durable_objects.bindings]]
+name = "BOARD"
+class_name = "Board"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Board"]

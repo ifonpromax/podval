@@ -10,7 +10,7 @@ function todayKey(){ const d=new Date(); return d.getFullYear()*10000+(d.getMont
 
 function newGame(cls,daily){
   cls=cls||CLASSES[0];
-  G.floor=0; G.kills=0; G.turn=0; G.msgs=[]; G.win=false; G.cause=''; G.path=null; G.exploring=false; G.hinted=false; G.daily=daily?todayKey():0; G.robbed=0; G.zina=0; G.bossHit=false;
+  G.floor=0; G.kills=0; G.turn=0; G.msgs=[]; G.win=false; G.cause=''; G.path=null; G.exploring=false; G.hinted=false; G.daily=daily?todayKey():0; G.robbed=0; G.zina=0; G.bossHit=false; G.boardSent=false; G.boardRes=null;
   try{ const pl=JSON.parse(localStorage.getItem('podval_played')||'[]'); if(!pl.includes(cls.id)) pl.push(cls.id); localStorage.setItem('podval_played',JSON.stringify(pl)); if(pl.length>=CLASSES.length) setTimeout(()=>ach('all_classes'),1500); }catch(e){}
   FX.floats=[]; FX.parts=[]; FX.shake=0;
   G.p={x:0,y:0,vx:0,vy:0,hp:cls.hp,hpMax:cls.hp,atk:cls.atk,def:cls.def,spd:cls.spd,lvl:1,xp:0,gold:0,inv:cls.start.map(id=>ITEMS[id]),weapon:null,armor:null,energy:100,st:{},name:cls.name,spr:cls.spr,isPlayer:true,bump:null,flash:0,face:1,fdx:1,fdy:0,id:0,cls,cd:0,lives:cls.lives||0};
@@ -551,4 +551,19 @@ function stepPath(){
 function tryDescend(){
   const p=G.p,m=G.map; if(G.state!=='play') return;
   if(m.t[idx(p.x,p.y)]===T.STAIRS) descend(); else msg('Тут нет лестницы.');
+}
+
+// ---- daily leaderboard (Worker behind the Deno proxy, see board/) ----
+const BOARD_URL='https://petuh-vs-kot.ifonpromax.deno.net/podval/board';
+function playerName(){ try{ const n=localStorage.getItem('podval_name'); if(n) return n; const u=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initDataUnsafe&&Telegram.WebApp.initDataUnsafe.user; return u?(u.first_name||u.username||''):''; }catch(e){ return ''; } }
+function setPlayerName(n){ try{ localStorage.setItem('podval_name',n); }catch(e){} }
+async function boardFetch(day){
+  const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),7000);
+  try{ const r=await fetch(`${BOARD_URL}/${day}`,{signal:ctl.signal}); if(!r.ok) throw new Error('http '+r.status); return await r.json(); }
+  finally{ clearTimeout(t); }
+}
+async function boardSubmit(day,entry){
+  const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),8000);
+  try{ const r=await fetch(`${BOARD_URL}/${day}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(entry),signal:ctl.signal}); const j=await r.json(); if(!r.ok) throw new Error(j.error||('http '+r.status)); return j; }
+  finally{ clearTimeout(t); }
 }
