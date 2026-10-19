@@ -1,12 +1,14 @@
 'use strict';
 const MW=48, MH=36;
-const T={WALL:0,FLOOR:1,DOOR:2,DOOR_OPEN:3,STAIRS:4,CRATE:5,KIOSK:6};
+const T={WALL:0,FLOOR:1,DOOR:2,DOOR_OPEN:3,STAIRS:4,CRATE:5,KIOSK:6,LOCKED:7,GYM:8};
+const DECOR_ABS={10:'bench'};
 const idx=(x,y)=>y*MW+x;
 const inb=(x,y)=>x>=0&&y>=0&&x<MW&&y<MH;
 const DIRS8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
-function isOpaque(m,x,y){ if(!inb(x,y)) return true; const t=m.t[idx(x,y)]; return t===T.WALL||t===T.DOOR||t===T.CRATE; }
-function isSolid(m,x,y){ if(!inb(x,y)) return true; const t=m.t[idx(x,y)]; return t===T.WALL||t===T.CRATE||t===T.KIOSK; }
+function isOpaque(m,x,y){ if(!inb(x,y)) return true; const t=m.t[idx(x,y)]; return t===T.WALL||t===T.DOOR||t===T.CRATE||t===T.LOCKED; }
+function isSolid(m,x,y){ if(!inb(x,y)) return true; const t=m.t[idx(x,y)]; return t===T.WALL||t===T.CRATE||t===T.KIOSK||t===T.LOCKED||t===T.GYM; }
+function isBlockTile(t){ return t===T.WALL||t===T.CRATE||t===T.KIOSK||t===T.LOCKED||t===T.GYM; }
 function isWalk(m,x,y){ if(!inb(x,y)) return false; const t=m.t[idx(x,y)]; return t===T.FLOOR||t===T.DOOR_OPEN||t===T.STAIRS; }
 // can an actor step from (x,y) to (nx,ny)? Doors handled separately by caller.
 function diagOk(m,x,y,nx,ny){ const dx=nx-x,dy=ny-y; if(dx&&dy){ if(isOpaque(m,x+dx,y)||isOpaque(m,x,y+dy)) return false; } return true; }
@@ -72,6 +74,21 @@ function makeMap(floor){
   if(floor<MAX_FLOOR) m.t[idx(best.cx,best.cy)]=T.STAIRS; else { m.t[idx(best.cx,best.cy)]=T.FLOOR; }
   m.t[idx(start.cx,start.cy)]=T.FLOOR;
   m.bossRoom=best;
+  // special room (from floor 2): locked storeroom / gym / bench with babkas
+  m.store=null; m.gym=null; m.benchRoom=null; m.special=null;
+  if(floor>=2){
+    let kind=R.weighted([{v:'store',w:4},{v:'gym',w:3},{v:'bench',w:3}]);
+    if(kind==='store'&&!carveStoreroom(m,rooms,start,best)) kind='gym';
+    if(kind==='gym'){
+      const cands=rooms.filter(r=>r!==start&&r!==best&&r.w>=5&&r.h>=4);
+      if(cands.length){ const r=R.pick(cands); for(let i=0;i<40;i++){ const x=R.i(r.x+1,r.x+r.w-2),y=R.i(r.y+1,r.y+r.h-2); const ii=idx(x,y); if(m.t[ii]!==T.FLOOR) continue; m.t[ii]=T.GYM; m.decor[ii]=0; m.gym={x,y,used:false}; break; } }
+    }
+    if(kind==='bench'){
+      const cands=rooms.filter(r=>r!==start&&r!==best&&r.w>=5&&r.h>=4);
+      if(cands.length){ const r=R.pick(cands); const ii=idx(r.cx,r.cy); if(m.t[ii]===T.FLOOR){ m.decor[ii]=10; m.benchRoom={x:r.cx,y:r.cy}; } }
+    }
+    m.special=kind;
+  }
   // kiosk (shop) on even floors, 50% on odd floors from 3
   m.kiosk=null;
   if(floor>=2&&(floor%2===0||R.chance(0.5))){
@@ -84,6 +101,27 @@ function makeMap(floor){
   return m;
 }
 
+function carveStoreroom(m,rooms,start,boss){
+  const cands=R.shuffle(rooms.filter(r=>r!==start&&r!==boss));
+  for(const r of cands){
+    for(const s of R.shuffle([0,1,2,3])){
+      let dx,dy,rx,ry; const rw=3,rh=3;
+      if(s===0){ dy=R.i(r.y,r.y+r.h-1); dx=r.x+r.w; rx=dx+1; ry=dy-1; }
+      else if(s===1){ dy=R.i(r.y,r.y+r.h-1); dx=r.x-1; rx=dx-3; ry=dy-1; }
+      else if(s===2){ dx=R.i(r.x,r.x+r.w-1); dy=r.y+r.h; rx=dx-1; ry=dy+1; }
+      else { dx=R.i(r.x,r.x+r.w-1); dy=r.y-1; rx=dx-1; ry=dy-3; }
+      if(rx-1<1||ry-1<1||rx+rw>MW-2||ry+rh>MH-2) continue;
+      let ok=m.t[idx(dx,dy)]===T.WALL;
+      for(let y=ry-1;y<=ry+rh&&ok;y++)for(let x=rx-1;x<=rx+rw;x++){ if(x===dx&&y===dy) continue; if(m.t[idx(x,y)]!==T.WALL){ ok=false; break; } }
+      if(!ok) continue;
+      for(let y=ry;y<ry+rh;y++)for(let x=rx;x<rx+rw;x++){ m.t[idx(x,y)]=T.FLOOR; m.decor[idx(x,y)]=0; }
+      m.t[idx(dx,dy)]=T.LOCKED;
+      m.store={x:rx,y:ry,w:rw,h:rh,door:{x:dx,y:dy},opened:false};
+      return true;
+    }
+  }
+  return false;
+}
 // BFS distance map over passable tiles (doors count as passable). passFn(x,y) extra filter.
 function bfsMap(m,sx,sy,passFn,maxD=9999){
   const d=new Int16Array(MW*MH).fill(-1);
@@ -95,7 +133,7 @@ function bfsMap(m,sx,sy,passFn,maxD=9999){
     for(const [dx,dy] of DIRS8){
       const nx=x+dx,ny=y+dy; if(!inb(nx,ny)) continue;
       const ni=idx(nx,ny); if(d[ni]>=0) continue;
-      const t=m.t[ni]; if(t===T.WALL||t===T.CRATE||t===T.KIOSK) continue;
+      const t=m.t[ni]; if(isBlockTile(t)) continue;
       if(!diagOk(m,x,y,nx,ny)) continue;
       if(!passFn(nx,ny)) continue;
       d[ni]=cd+1; q[qt++]=ni;

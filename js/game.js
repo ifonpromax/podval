@@ -10,7 +10,8 @@ function todayKey(){ const d=new Date(); return d.getFullYear()*10000+(d.getMont
 
 function newGame(cls,daily){
   cls=cls||CLASSES[0];
-  G.floor=0; G.kills=0; G.turn=0; G.msgs=[]; G.win=false; G.cause=''; G.path=null; G.exploring=false; G.hinted=false; G.daily=daily?todayKey():0;
+  G.floor=0; G.kills=0; G.turn=0; G.msgs=[]; G.win=false; G.cause=''; G.path=null; G.exploring=false; G.hinted=false; G.daily=daily?todayKey():0; G.robbed=0; G.zina=0; G.bossHit=false;
+  try{ const pl=JSON.parse(localStorage.getItem('podval_played')||'[]'); if(!pl.includes(cls.id)) pl.push(cls.id); localStorage.setItem('podval_played',JSON.stringify(pl)); if(pl.length>=CLASSES.length) setTimeout(()=>ach('all_classes'),1500); }catch(e){}
   FX.floats=[]; FX.parts=[]; FX.shake=0;
   G.p={x:0,y:0,vx:0,vy:0,hp:cls.hp,hpMax:cls.hp,atk:cls.atk,def:cls.def,spd:cls.spd,lvl:1,xp:0,gold:0,inv:cls.start.map(id=>ITEMS[id]),weapon:null,armor:null,energy:100,st:{},name:cls.name,spr:cls.spr,isPlayer:true,bump:null,flash:0,face:1,fdx:1,fdy:0,id:0,cls,cd:0,lives:cls.lives||0};
   G.state='play';
@@ -30,7 +31,7 @@ function descend(){
   G.shop=null;
   if(m.kiosk){
     const f=G.floor;
-    const st=[{def:ITEMS.kefir,price:15,qty:3},{def:ITEMS.shaurma,price:10,qty:3},{def:ITEMS.boyara,price:25,qty:2},{def:ITEMS.energy,price:30,qty:1},{def:R.pick([ITEMS.sc_tele,ITEMS.sc_map,ITEMS.sc_zap]),price:35,qty:1}];
+    const st=[{def:ITEMS.kefir,price:15,qty:3},{def:ITEMS.shaurma,price:10,qty:3},{def:ITEMS.seeds,price:8,qty:2},{def:ITEMS.boyara,price:25,qty:2},{def:ITEMS.energy,price:30,qty:1},{def:R.pick([ITEMS.sc_tele,ITEMS.sc_map,ITEMS.sc_zap,ITEMS.brick,ITEMS.spray]),price:35,qty:1}];
     const wpn=[ITEMS.w1,ITEMS.w2,ITEMS.w3,ITEMS.w4][clamp(Math.floor(f/2),0,3)];
     const arm=[ITEMS.a1,ITEMS.a2,ITEMS.a3][clamp(Math.floor((f-1)/2.5),0,2)];
     st.push({def:wpn,price:wpn.atk*22,qty:1},{def:arm,price:arm.def*28,qty:1});
@@ -40,6 +41,7 @@ function descend(){
   computeFOV(m,p.x,p.y,FOV_R);
   G.dmap=bfsMap(m,p.x,p.y,()=>true);
   const th=THEMES[G.floor];
+  if(G.floor>=4){ ach('floor4'); if(G.turn<400) ach('speed'); }
   UI.banner(`Этаж ${G.floor}. ${th.name}`,th.sub);
   msg(`Этаж ${G.floor}: ${th.name}. ${R.pick(FLAVOR.enter)}`,'sys');
   AU.sfx('stairs');
@@ -80,6 +82,22 @@ function populate(m){
   let g=4+f;
   while(g>0){ const r=R.pick(m.rooms); const pos=randomFloorInRoom(m,r); if(pos) G.items.push({x:pos.x,y:pos.y,def:ITEMS.gold,amt:R.i(3,8)+f*2}); g--; }
   if(f===1){ const pos=randomFloorInRoom(m,m.rooms[0]); if(pos) G.items.push({x:pos.x,y:pos.y,def:ITEMS.kefir}); }
+  // special rooms
+  if(m.store){
+    const s=m.store; const cells=[]; for(let y=s.y;y<s.y+s.h;y++)for(let x=s.x;x<s.x+s.w;x++) cells.push({x,y});
+    R.shuffle(cells);
+    const loot=[ITEMS[R.weighted(it)],ITEMS[R.weighted(it)],R.pick([ITEMS.sc_zap,ITEMS.energy,ITEMS.boyara,ITEMS.brick])];
+    const eq=[ITEMS.w2,ITEMS.w3,ITEMS.a2,ITEMS.w4,ITEMS.a3].filter(d=>(d.atk||d.def*1.5)<=f+2); if(eq.length) loot.push(R.pick(eq));
+    loot.forEach((d,i)=>{ if(cells[i]) G.items.push({x:cells[i].x,y:cells[i].y,def:d}); });
+    if(cells[loot.length]) G.items.push({x:cells[loot.length].x,y:cells[loot.length].y,def:ITEMS.gold,amt:20+f*10});
+    const holders=G.mons.filter(a=>!a.boss);
+    if(holders.length){ R.pick(holders).hasKey=true; }
+    else { const pos=randomFloorInRoom(m,R.pick(m.rooms)); if(pos) G.items.push({x:pos.x,y:pos.y,def:ITEMS.key}); }
+  }
+  if(m.benchRoom){
+    const b=m.benchRoom; let n=0;
+    for(const [dx,dy] of R.shuffle(DIRS8.slice())){ if(n>=3) break; const x=b.x+dx,y=b.y+dy; if(freeTile(m,x,y)&&!itemAt(x,y)&&m.t[idx(x,y)]===T.FLOOR){ const bb=spawnMon('babka',x,y); bb.noWake=true; bb.bench=true; bb.hp=bb.hpMax=Math.round(bb.hpMax*1.2); n++; } }
+  }
   // traps
   let tr=1+Math.floor(f/2);
   const kinds=[{v:'wire',w:5},{v:'board',w:4},{v:'hatch',w:f<MAX_FLOOR?3:0}].filter(e=>e.w>0);
@@ -108,6 +126,13 @@ function tryMove(dx,dy){
   const t=m.t[idx(nx,ny)];
   if(t===T.DOOR){ m.t[idx(nx,ny)]=T.DOOR_OPEN; AU.sfx('door'); msg('Дверь со скрипом открывается.'); endTurn(); return true; }
   if(t===T.KIOSK){ G.path=null; G.exploring=false; UI.openShop(); return false; }
+  if(t===T.GYM){ G.path=null; G.exploring=false; UI.openGym(); return false; }
+  if(t===T.LOCKED){
+    G.path=null; G.exploring=false;
+    const ki=p.inv.findIndex(d=>d.kind==='key');
+    if(ki<0){ msg('Заперто. Ключ у кого-то на этаже.','bad'); AU.sfx('bump'); return false; }
+    p.inv.splice(ki,1); m.t[idx(nx,ny)]=T.DOOR_OPEN; if(m.store) m.store.opened=true; AU.sfx('door'); msg('Ключ подошёл. Кладовка открыта.','good'); ach('storeroom'); UI.hud(); endTurn(); return true;
+  }
   if(t===T.WALL||t===T.CRATE||!diagOk(m,p.x,p.y,nx,ny)){ p.bump={dx,dy,t:1,small:true}; AU.sfx('bump'); return false; }
   p.x=nx;p.y=ny;
   AU.sfx('step');
@@ -122,8 +147,8 @@ function checkTrap(){
   const p=G.p; const tr=trapAt(p.x,p.y); if(!tr) return false;
   G.path=null; G.exploring=false; tr.seen=true;
   if(tr.kind==='wire'){ const d=3+G.floor; FX.zap=0.6; AU.sfx('zap'); msg(`Оголённый провод! Током: -${d}.`,'bad'); damage(p,d,null,true); if(G.state!=='play') return true; endTurn(); return true; }
-  if(tr.kind==='board'){ AU.sfx('door'); msg('СКРИИИП. Половица. Все проснулись.','bad'); for(const a of G.mons){ if(cheb(a,p)<=12&&a.state==='sleep'){ a.state='chase'; a.tx=p.x;a.ty=p.y; } } G.traps.splice(G.traps.indexOf(tr),1); endTurn(); return true; }
-  if(tr.kind==='hatch'){ const d=R.i(2,5); msg(`Люк! Ты проваливаешься этажом ниже и ушибаешься: -${d}.`,'bad'); FX.shake=12; AU.sfx('hurt'); p.hp-=d; addFloat(p.x,p.y,'-'+d,'#ff6a6a'); if(p.hp<=0){ die(null,'люк'); return true; } descend(); p.x=0; const m=G.map; for(let i=0;i<500;i++){ const x=R.i(1,MW-2),y=R.i(1,MH-2); if(freeTile(m,x,y)&&m.t[idx(x,y)]===T.FLOOR){ p.x=x;p.y=y;p.vx=x;p.vy=y; RD.cam.x=x;RD.cam.y=y; break; } } computeFOV(m,p.x,p.y,FOV_R); UI.hud(); saveRun(); return true; }
+  if(tr.kind==='board'){ AU.sfx('door'); msg('СКРИИИП. Половица. Все проснулись.','bad'); for(const a of G.mons){ if(cheb(a,p)<=12&&a.state==='sleep'&&!a.noWake){ a.state='chase'; a.tx=p.x;a.ty=p.y; } } G.traps.splice(G.traps.indexOf(tr),1); endTurn(); return true; }
+  if(tr.kind==='hatch'){ const d=R.i(2,5); msg(`Люк! Ты проваливаешься этажом ниже и ушибаешься: -${d}.`,'bad'); ach('hatch'); FX.shake=12; AU.sfx('hurt'); p.hp-=d; addFloat(p.x,p.y,'-'+d,'#ff6a6a'); if(p.hp<=0){ die(null,'люк'); return true; } descend(); p.x=0; const m=G.map; for(let i=0;i<500;i++){ const x=R.i(1,MW-2),y=R.i(1,MH-2); if(freeTile(m,x,y)&&m.t[idx(x,y)]===T.FLOOR){ p.x=x;p.y=y;p.vx=x;p.vy=y; RD.cam.x=x;RD.cam.y=y; break; } } computeFOV(m,p.x,p.y,FOV_R); UI.hud(); saveRun(); return true; }
   return false;
 }
 function revealTraps(){
@@ -133,7 +158,7 @@ function revealTraps(){
 
 function pickup(){
   const p=G.p; const it=itemAt(p.x,p.y); if(!it) return;
-  if(it.def.kind==='gold'){ p.gold+=it.amt; G.items.splice(G.items.indexOf(it),1); msg(`Нашёл ${it.amt} ₽ мелочью.`,'gold'); AU.sfx('coin'); spawnParts(p.x,p.y,'#f3c53a',6); UI.hud(); return; }
+  if(it.def.kind==='gold'){ p.gold+=it.amt; G.items.splice(G.items.indexOf(it),1); msg(`Нашёл ${it.amt} ₽ мелочью.`,'gold'); AU.sfx('coin'); spawnParts(p.x,p.y,'#f3c53a',6); if(p.gold>=500) ach('rich'); UI.hud(); return; }
   if(p.inv.length>=10){ msg(`${it.def.name}: карманы полны.`,'bad'); return; }
   p.inv.push(it.def); G.items.splice(G.items.indexOf(it),1); msg(`Подобрал: ${it.def.name}.`,'good'); AU.sfx('pickup'); UI.hud();
 }
@@ -147,9 +172,13 @@ function useItem(i){
     AU.sfx('drink'); msg(`Выпил: ${d.name}.`);
   } else if(d.kind==='food'){
     heal(p,d.heal); AU.sfx('drink'); msg(p.cls.id==='barsik'?'Барсик вытащил из шаурмы мясо.':'Шаурма… а ничего такая.');
-    if(R.chance(p.cls.id==='barsik'?0.05:0.25)){ p.st.poison=(p.st.poison||0)+4; msg('Так. Шаурма была не очень. Отравление!','bad'); }
+    if(R.chance(p.cls.id==='barsik'?0.05:0.25)){ p.st.poison=(p.st.poison||0)+4; msg('Так. Шаурма была не очень. Отравление!','bad'); ach('shaurma'); }
   } else if(d.kind==='scroll'){
     readScroll(d.effect);
+  } else if(d.kind==='throw'){
+    if(!throwItem(d.effect)) return;
+  } else if(d.kind==='key'){
+    msg('Подойди к запертой двери и шагни в неё.'); return;
   } else if(d.kind==='weapon'){
     const old=p.weapon; p.weapon=d; p.inv.splice(i,1); if(old) p.inv.push(old); msg(`В ${p.cls.id==='barsik'?'зубах':'руках'}: ${d.name} (+${d.atk} атк).`,'good'); AU.sfx('equip'); UI.hud(); endTurn(); return;
   } else if(d.kind==='armor'){
@@ -164,7 +193,7 @@ function buyItem(i){
   if(s.qty<=0){ msg('Тётя Зина: «Кончилось.»','talk'); return; }
   if(p.gold<s.price){ msg('Тётя Зина: «Без денег не отпускаю.»','talk'); AU.sfx('bump'); return; }
   if(p.inv.length>=10){ msg('Карманы полны.','bad'); return; }
-  p.gold-=s.price; s.qty--; p.inv.push(s.def); AU.sfx('coin'); msg(`Купил: ${s.def.name} за ${s.price} ₽.`,'gold'); UI.hud(); saveRun();
+  p.gold-=s.price; s.qty--; p.inv.push(s.def); AU.sfx('coin'); msg(`Купил: ${s.def.name} за ${s.price} ₽.`,'gold'); G.zina=(G.zina||0)+1; if(G.zina>=5) ach('zina'); UI.hud(); saveRun();
 }
 function sellItem(i){
   const p=G.p; const d=p.inv[i]; if(!d) return;
@@ -189,6 +218,29 @@ function readScroll(e){
     FX.shake=8; AU.sfx('zap');
     msg(hit?`Электрик дал фазу: ${hit} ${plural(hit,'цель','цели','целей')} под током.`:'Фаза ушла в никуда.','good');
   }
+}
+function throwItem(e){
+  const p=G.p,m=G.map;
+  if(e==='seeds'){
+    let n=0; for(const a of G.mons){ if(m.vis[idx(a.x,a.y)]&&cheb(a,p)<=6&&!a.boss){ a.stun=3; if(a.state==='sleep') a.state='wander'; n++; } }
+    spawnParts(p.x,p.y,'#e8b890',12); AU.sfx('scroll');
+    msg(n?`Семки в толпу! ${n} ${plural(n,'враг лузгает','врага лузгают','врагов лузгают')}.`:'Семки рассыпались. Никому не интересно.','good');
+    return true;
+  }
+  if(e==='brick'){
+    let t=null,bd=99; for(const a of G.mons){ if(!m.vis[idx(a.x,a.y)]) continue; const d=cheb(a,p); if(d<=6&&d<bd&&lineClear(m,p.x,p.y,a.x,a.y)){bd=d;t=a;} }
+    if(!t){ msg('Некого бить кирпичом.'); return false; }
+    FX.proj={x:p.x,y:p.y,tx:t.x,ty:t.y,t:0,color:'#8c1f2a'}; const dmg=7+G.floor; G.lastHit='brick';
+    msg(`Кирпич летит в ${t.name}: -${dmg}.`,'good'); AU.sfx('crit'); damage(t,dmg,p,true); G.lastHit=null;
+    return true;
+  }
+  if(e==='spray'){
+    let n=0; for(const a of G.mons.slice()){ if(cheb(a,p)<=1){ n++; if(a.ghost){ msg('Призрак ненавидит краску!','good'); damage(a,10,p,true); } else { a.flee=4; a.state='chase'; damage(a,2,p,true); } } }
+    spawnParts(p.x,p.y,'#d2383c',16); AU.sfx('zap'); FX.shake=3;
+    msg(n?`Пшшш! ${n} ${plural(n,'сосед ослеплён','соседа ослеплены','соседей ослеплены')} и бегут.`:'Пшшш. Красиво, но никого рядом.','good');
+    return true;
+  }
+  return false;
 }
 function plural(n,a,b,c){ const n10=n%10,n100=n%100; if(n10===1&&n100!==11) return a; if(n10>=2&&n10<=4&&(n100<10||n100>=20)) return b; return c; }
 
@@ -235,7 +287,7 @@ function attack(att,def,ranged){
   if(def.isPlayer&&def.cls.dodge&&R.chance(def.cls.dodge)){ addFloat(def.x,def.y,'мимо','#b8d8ff'); msg(`${att.name} ${att.a} воздух. Барсик увернулся.`,'good'); AU.sfx('step'); return; }
   damage(def,dmg,att,false,crit);
   if(def.hp>0&&def.isPlayer){
-    if(att.steal&&G.p.gold>0&&R.chance(0.35)){ const s=Math.min(G.p.gold,(att.bigSteal?15:5)+G.floor*3); G.p.gold-=s; msg(`${att.name} вытащил ${s} ₽. «${R.pick(FLAVOR[att.type]||FLAVOR.gopnik)}»`,'bad'); }
+    if(att.steal&&G.p.gold>0&&R.chance(0.35)){ const s=Math.min(G.p.gold,(att.bigSteal?15:5)+G.floor*3); G.p.gold-=s; msg(`${att.name} вытащил ${s} ₽. «${R.pick(FLAVOR[att.type]||FLAVOR.gopnik)}»`,'bad'); G.robbed=(G.robbed||0)+1; if(G.robbed>=5) ach('robbed'); }
     if(att.poison&&R.chance(0.4)){ G.p.st.poison=(G.p.st.poison||0)+3; msg('От бомжа несёт так, что ты отравлен.','bad'); }
   }
 }
@@ -245,7 +297,7 @@ function damage(def,dmg,src,magic,crit){
   spawnParts(def.x,def.y,def.ghost?'#b8d8ff':def.animal?'#8c1f2a':'#d2383c',crit?10:5);
   if(def.isPlayer){
     FX.shake=Math.max(FX.shake,crit?10:5); AU.sfx('hurt'); haptic(crit?'heavy':'medium');
-    if(src){ msg(`${src.name} ${src.a||'бьёт'} тебя: -${dmg}${crit?' (крит!)':''}.`,'bad'); }
+    if(src){ msg(`${src.name} ${src.a||'бьёт'} тебя: -${dmg}${crit?' (крит!)':''}.`,'bad'); if(src.boss) G.bossHit=true; }
     if(def.hp<=0) die(src);
     UI.hud();
   } else {
@@ -260,15 +312,19 @@ function killMon(mon){
   msg(`${mon.name} ${mon.ghost?'растворяется':mon.animal?'сдох':'падает'}.`,'good');
   AU.sfx('kill');
   gainXp(mon.xp);
+  ach('first_blood'); if(mon.ghost) ach('ghost'); if(G.lastHit==='brick') ach('brick');
+  if(mon.boss&&!G.bossHit) ach('nodmg_boss');
+  if(mon.hasKey){ if(itemAt(mon.x,mon.y)){ const it=itemAt(mon.x,mon.y); G.items.splice(G.items.indexOf(it),1); } G.items.push({x:mon.x,y:mon.y,def:ITEMS.key}); msg(`У ${mon.name} выпал ключ!`,'lvl'); }
+  if(mon.bench&&!itemAt(mon.x,mon.y)) G.items.push({x:mon.x,y:mon.y,def:ITEMS.gold,amt:10+G.floor*4});
   if(R.chance(mon.boss?1:0.3)&&!itemAt(mon.x,mon.y)) G.items.push({x:mon.x,y:mon.y,def:ITEMS.gold,amt:R.i(2,6)+G.floor*(mon.boss?10:1)});
   if(mon.boss){ for(const [dx,dy] of DIRS8){ const x=mon.x+dx,y=mon.y+dy; if(isWalk(G.map,x,y)&&!itemAt(x,y)){ G.items.push({x,y,def:R.pick([ITEMS.w3,ITEMS.a2,ITEMS.w4,ITEMS.a3])}); break; } } }
   if(mon.type==='upravdom') win();
-  else if(mon.type==='dvornik'){ msg('Дворник повержен. «Кто теперь мести будет…»','lvl'); FX.shake=10; }
+  else if(mon.type==='dvornik'){ msg('Дворник повержен. «Кто теперь мести будет…»','lvl'); FX.shake=10; ach('dvornik'); }
 }
 function xpNeed(l){ return Math.floor(10*Math.pow(l,1.75)); }
 function gainXp(n){
   const p=G.p; p.xp+=Math.round(n*(p.cls.xpMul||1));
-  while(p.xp>=xpNeed(p.lvl)){ p.xp-=xpNeed(p.lvl); p.lvl++; p.hpMax+=5; p.hp=Math.min(p.hpMax,p.hp+7); if(p.lvl%2===0) p.atk+=1; if(p.lvl%4===0) p.def+=1; msg(`Уровень ${p.lvl}! Ты стал крепче.`,'lvl'); addFloat(p.x,p.y,'LVL UP','#f3c53a'); AU.sfx('levelup'); spawnParts(p.x,p.y,'#f3c53a',16); }
+  while(p.xp>=xpNeed(p.lvl)){ p.xp-=xpNeed(p.lvl); p.lvl++; p.hpMax+=5; p.hp=Math.min(p.hpMax,p.hp+7); if(p.lvl%2===0) p.atk+=1; if(p.lvl%4===0) p.def+=1; msg(`Уровень ${p.lvl}! Ты стал крепче.`,'lvl'); addFloat(p.x,p.y,'LVL UP','#f3c53a'); AU.sfx('levelup'); spawnParts(p.x,p.y,'#f3c53a',16); if(p.lvl>=10) ach('lvl10'); }
   UI.hud();
 }
 function die(src,causeOverride){
@@ -280,7 +336,23 @@ function die(src,causeOverride){
   msg('Ты сдох.','bad');
   saveBest(); recordRun(); clearRun(); UI.hud(); setTimeout(()=>UI.showDeath(),1100);
 }
-function win(){ G.state='win'; G.win=true; AU.sfx('win'); G.path=null; msg('Управдом повержен! Долги списаны.','lvl'); saveBest(); recordRun(); clearRun(); setTimeout(()=>UI.showWin(),1400); }
+function win(){ G.state='win'; G.win=true; AU.sfx('win'); G.path=null; msg('Управдом повержен! Долги списаны.','lvl'); ach('win'); if(G.p.cls.id==='barsik') ach('win_barsik'); saveBest(); recordRun(); clearRun(); setTimeout(()=>UI.showWin(),1400); }
+// ---- achievements ----
+function loadAch(){ try{ return JSON.parse(localStorage.getItem('podval_ach')||'{}'); }catch(e){ return {}; } }
+function ach(id){
+  const a=loadAch(); if(a[id]) return; const def=ACH.find(x=>x.id===id); if(!def) return;
+  a[id]=Date.now(); try{ localStorage.setItem('podval_ach',JSON.stringify(a)); }catch(e){}
+  UI.toast(def); AU.sfx('levelup');
+}
+function gymBuy(opt){
+  const p=G.p,m=G.map; if(!m.gym||m.gym.used) return;
+  const price=25+G.floor*15;
+  if(p.gold<price){ msg('Качок на входе: «Абонемент дорогой, братан.»','talk'); AU.sfx('bump'); return; }
+  p.gold-=price; m.gym.used=true;
+  if(opt==='atk'){ p.atk+=1; msg('Потягал железо. +1 атака навсегда.','lvl'); }
+  else { p.hpMax+=6; p.hp+=6; msg('Покачал пресс. +6 к максимуму HP.','lvl'); }
+  addFloat(p.x,p.y,'+','#f3c53a'); spawnParts(p.x,p.y,'#f3c53a',10); AU.sfx('levelup'); ach('gym'); UI.hud(); UI.closeOverlay(); endTurn();
+}
 function score(){ return G.p.gold+G.kills*10+(G.floor-1)*100+(G.win?1000:0); }
 function saveBest(){ try{ const b=loadBest(); const s=score(); const nb={floor:Math.max(b.floor||0,G.floor),score:Math.max(b.score||0,s),runs:(b.runs||0)+1,wins:(b.wins||0)+(G.win?1:0)}; localStorage.setItem('podval_best',JSON.stringify(nb)); }catch(e){} }
 function loadBest(){ try{ return JSON.parse(localStorage.getItem('podval_best')||'{}'); }catch(e){ return {}; } }
@@ -293,10 +365,10 @@ function saveRun(){
   if(G.state!=='play') return;
   try{
     const p=G.p,m=G.map;
-    const data={v:2,floor:G.floor,turn:G.turn,kills:G.kills,hinted:G.hinted,daily:G.daily,
-      map:{t:Array.from(m.t),seen:Array.from(m.seen),decor:Array.from(m.decor),rooms:m.rooms,start:m.start,stairs:m.stairs,bossRoom:m.bossRoom,kiosk:m.kiosk},
+    const data={v:2,floor:G.floor,turn:G.turn,kills:G.kills,hinted:G.hinted,daily:G.daily,robbed:G.robbed,zina:G.zina,bossHit:G.bossHit,
+      map:{t:Array.from(m.t),seen:Array.from(m.seen),decor:Array.from(m.decor),rooms:m.rooms,start:m.start,stairs:m.stairs,bossRoom:m.bossRoom,kiosk:m.kiosk,store:m.store,gym:m.gym,benchRoom:m.benchRoom,special:m.special},
       shop:G.shop?{stock:G.shop.stock.map(s=>({id:s.def.id,price:s.price,qty:s.qty})),greet:G.shop.greet}:null,
-      mons:G.mons.map(a=>({type:a.type,x:a.x,y:a.y,hp:a.hp,hpMax:a.hpMax,atk:a.atk,xp:a.xp,state:a.state,energy:a.energy,tcount:a.tcount,tx:a.tx,ty:a.ty,stun:a.stun,flee:a.flee})),
+      mons:G.mons.map(a=>({type:a.type,x:a.x,y:a.y,hp:a.hp,hpMax:a.hpMax,atk:a.atk,xp:a.xp,state:a.state,energy:a.energy,tcount:a.tcount,tx:a.tx,ty:a.ty,stun:a.stun,flee:a.flee,hasKey:a.hasKey,noWake:a.noWake,bench:a.bench})),
       items:G.items.map(i=>({x:i.x,y:i.y,id:i.def.id,amt:i.amt})),
       traps:G.traps,
       p:{cls:p.cls.id,x:p.x,y:p.y,hp:p.hp,hpMax:p.hpMax,atk:p.atk,def:p.def,lvl:p.lvl,xp:p.xp,gold:p.gold,inv:p.inv.map(d=>d.id),weapon:p.weapon?p.weapon.id:null,armor:p.armor?p.armor.id:null,energy:p.energy,st:p.st,cd:p.cd,lives:p.lives,fdx:p.fdx,fdy:p.fdy,face:p.face},
@@ -309,13 +381,13 @@ function clearRun(){ try{ localStorage.removeItem('podval_run'); }catch(e){} }
 function loadRun(){
   const d=hasSavedRun(); if(!d) return false;
   const cls=CLASSES.find(c=>c.id===d.p.cls)||CLASSES[0];
-  G.floor=d.floor; G.turn=d.turn; G.kills=d.kills; G.hinted=d.hinted; G.daily=d.daily||0; G.win=false; G.cause=''; G.path=null; G.exploring=false; G.msgs=d.msgs||[];
+  G.floor=d.floor; G.turn=d.turn; G.kills=d.kills; G.hinted=d.hinted; G.daily=d.daily||0; G.win=false; G.cause=''; G.path=null; G.exploring=false; G.msgs=d.msgs||[]; G.robbed=d.robbed||0; G.zina=d.zina||0; G.bossHit=!!d.bossHit;
   FX.floats=[]; FX.parts=[]; FX.shake=0;
-  const m={w:MW,h:MH,t:Uint8Array.from(d.map.t),seen:Uint8Array.from(d.map.seen),vis:new Uint8Array(MW*MH),decor:Uint8Array.from(d.map.decor),rooms:d.map.rooms,floor:d.floor,start:d.map.start,stairs:d.map.stairs,bossRoom:d.map.bossRoom,kiosk:d.map.kiosk};
+  const m={w:MW,h:MH,t:Uint8Array.from(d.map.t),seen:Uint8Array.from(d.map.seen),vis:new Uint8Array(MW*MH),decor:Uint8Array.from(d.map.decor),rooms:d.map.rooms,floor:d.floor,start:d.map.start,stairs:d.map.stairs,bossRoom:d.map.bossRoom,kiosk:d.map.kiosk,store:d.map.store||null,gym:d.map.gym||null,benchRoom:d.map.benchRoom||null,special:d.map.special||null};
   G.map=m;
   const q=d.p;
   G.p={x:q.x,y:q.y,vx:q.x,vy:q.y,hp:q.hp,hpMax:q.hpMax,atk:q.atk,def:q.def,spd:cls.spd,lvl:q.lvl,xp:q.xp,gold:q.gold,inv:q.inv.map(id=>ITEMS[id]).filter(Boolean),weapon:q.weapon?ITEMS[q.weapon]:null,armor:q.armor?ITEMS[q.armor]:null,energy:q.energy,st:q.st||{},name:cls.name,spr:cls.spr,isPlayer:true,bump:null,flash:0,face:q.face||1,fdx:q.fdx,fdy:q.fdy,id:0,cls,cd:q.cd||0,lives:q.lives||0};
-  G.mons=d.mons.map(a=>{ const base=MON[a.type]; return Object.assign({},base,{type:a.type,x:a.x,y:a.y,vx:a.x,vy:a.y,hp:a.hp,hpMax:a.hpMax,atk:a.atk,xp:a.xp,state:a.state,energy:a.energy,tcount:a.tcount,tx:a.tx,ty:a.ty,stun:a.stun||0,flee:a.flee||0,lost:0,bump:null,flash:0,face:-1,id:nextId++}); });
+  G.mons=d.mons.map(a=>{ const base=MON[a.type]; return Object.assign({},base,{type:a.type,x:a.x,y:a.y,vx:a.x,vy:a.y,hp:a.hp,hpMax:a.hpMax,atk:a.atk,xp:a.xp,state:a.state,energy:a.energy,tcount:a.tcount,tx:a.tx,ty:a.ty,stun:a.stun||0,flee:a.flee||0,hasKey:!!a.hasKey,noWake:!!a.noWake,bench:!!a.bench,lost:0,bump:null,flash:0,face:-1,id:nextId++}); });
   G.items=d.items.map(i=>({x:i.x,y:i.y,def:ITEMS[i.id],amt:i.amt})).filter(i=>i.def);
   G.traps=d.traps||[];
   G.shop=d.shop?{stock:d.shop.stock.map(s=>({def:ITEMS[s.id],price:s.price,qty:s.qty})).filter(s=>s.def),greet:d.shop.greet}:null;
@@ -404,7 +476,9 @@ function onNotice(m){
   const f=FLAVOR[m.type];
   if(f&&R.chance(0.75)) msg(`${m.name}: «${R.pick(f)}»`,'talk');
   else msg(`${m.name} заметил тебя.`);
-  if(m.loud){ let n=0; for(const a of G.mons){ if(a!==m&&a.state==='sleep'&&cheb(a,m)<=12){ a.state='chase'; a.tx=G.p.x;a.ty=G.p.y; n++; } } if(n) msg(`Перфоратор разбудил весь этаж (${n}).`,'bad'); AU.sfx('summon'); FX.shake=4; }
+  if(m.boss) G.bossHit=false;
+  if(m.bench&&R.chance(0.8)) msg(`Бабка с лавочки: «${R.pick(FLAVOR.bench)}»`,'talk');
+  if(m.loud){ let n=0; for(const a of G.mons){ if(a!==m&&a.state==='sleep'&&!a.noWake&&cheb(a,m)<=12){ a.state='chase'; a.tx=G.p.x;a.ty=G.p.y; n++; } } if(n) msg(`Перфоратор разбудил весь этаж (${n}).`,'bad'); AU.sfx('summon'); FX.shake=4; }
   if(m.boss){ UI.banner(m.name,m.type==='dvornik'?'«Намусорили тут!»':'«Вы задолжали»',true); AU.sfx('boss'); }
 }
 
@@ -421,7 +495,7 @@ function findFrontier(pass){
   const m=G.map,p=G.p; const d=bfsMap(m,p.x,p.y,pass); let best=-1,bd=1e9;
   for(const it of G.items){ const i=idx(it.x,it.y); if(d[i]>0&&d[i]<bd&&!(it.def.kind!=='gold'&&p.inv.length>=10)){bd=d[i];best=i;} }
   if(best<0) for(let y=1;y<MH-1;y++)for(let x=1;x<MW-1;x++){
-    const i=idx(x,y); if(d[i]<=0) continue; const tt=m.t[i]; if(tt===T.WALL||tt===T.CRATE||tt===T.KIOSK) continue;
+    const i=idx(x,y); if(d[i]<=0) continue; const tt=m.t[i]; if(isBlockTile(tt)) continue;
     let fr=tt===T.DOOR; if(!fr) for(const [dx,dy] of DIRS8){ if(!m.seen[idx(x+dx,y+dy)]){fr=true;break;} }
     if(fr&&d[i]<bd){bd=d[i];best=i;}
   }

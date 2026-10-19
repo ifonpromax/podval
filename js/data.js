@@ -53,6 +53,7 @@ function itemTable(f){
     {v:'sc_tele',w:4},{v:'sc_map',w:4},{v:'sc_zap',w:f>=2?5:1},
     {v:'w1',w:f<=3?5:1},{v:'w2',w:f>=2&&f<=5?4:1},{v:'w3',w:f>=4?4:0},{v:'w4',w:f>=6?2:0},
     {v:'a1',w:f<=3?5:1},{v:'a2',w:f>=3&&f<=6?3:0},{v:'a3',w:f>=5?2:0},
+    {v:'seeds',w:5},{v:'brick',w:f>=2?4:1},{v:'spray',w:f>=3?3:0},
   ].filter(e=>e.w>0);
 }
 function monTable(f){
@@ -83,3 +84,31 @@ const TRAPS={
  wire: {name:'Оголённый провод',spr:'wire', desc:'бьёт током'},
  board:{name:'Скрипучая половица',spr:'board',desc:'будит всех вокруг'},
 };
+
+Object.assign(ITEMS,{
+ seeds:{id:'seeds',name:'Семки',       spr:'seeds',kind:'throw',effect:'seeds',desc:'все рядом лузгают 3 хода'},
+ brick:{id:'brick',name:'Кирпич',      spr:'brick',kind:'throw',effect:'brick',desc:'в ближайшего, больно'},
+ spray:{id:'spray',name:'Баллончик',   spr:'spray',kind:'throw',effect:'spray',desc:'соседи ослеплены и бегут'},
+ key:  {id:'key',  name:'Ключ от кладовки',spr:'key',kind:'key',desc:'открывает запертую дверь'},
+});
+const ACH=[
+ {id:'first_blood',name:'Первая кровь',desc:'Убить первого врага.',spr:'rat'},
+ {id:'floor4',name:'Глубже',desc:'Дойти до 4 этажа.',spr:'stairs'},
+ {id:'dvornik',name:'Чистота',desc:'Победить Дворника.',spr:'dvornik'},
+ {id:'win',name:'Долги списаны',desc:'Победить Управдома.',spr:'upravdom'},
+ {id:'win_barsik',name:'Девять жизней',desc:'Пройти игру Барсиком.',spr:'barsik'},
+ {id:'rich',name:'Мажор',desc:'Накопить 500 ₽.',spr:'gold'},
+ {id:'shaurma',name:'Шаурма у вокзала',desc:'Отравиться шаурмой.',spr:'shaurma'},
+ {id:'hatch',name:'Провал',desc:'Упасть в открытый люк.',spr:'hatch'},
+ {id:'ghost',name:'Экзорцист',desc:'Упокоить призрака жильца.',spr:'ghost'},
+ {id:'robbed',name:'Лох',desc:'Быть обворованным 5 раз за забег.',spr:'gopnik'},
+ {id:'gym',name:'Качок',desc:'Прокачаться в качалке.',spr:'barbell'},
+ {id:'storeroom',name:'Домушник',desc:'Открыть запертую кладовку.',spr:'key'},
+ {id:'nodmg_boss',name:'Неприкасаемый',desc:'Убить босса, не получив от него урона.',spr:'bronik'},
+ {id:'lvl10',name:'Ветеран',desc:'Достичь 10 уровня.',spr:'player'},
+ {id:'speed',name:'Спринтер',desc:'Дойти до 4 этажа быстрее чем за 400 ходов.',spr:'energy'},
+ {id:'zina',name:'Постоянный клиент',desc:'Купить 5 вещей у тёти Зины за забег.',spr:'kiosk'},
+ {id:'brick',name:'Кирпичом в голову',desc:'Убить врага кирпичом.',spr:'brick'},
+ {id:'all_classes',name:'Весь двор',desc:'Сыграть за всех четверых.',spr:'mihalych'},
+];
+FLAVOR.bench=[ 'Шпана!', 'А вот в наше время…', 'Ты чей будешь?', 'Иди отсюда, наркоман!' ];

@@ -47,6 +47,7 @@ const UI={
       const d=code.match(/^(?:Digit|Numpad)(\d)$/); if(d){ const n=d[1]==='0'?9:parseInt(d[1])-1; if(e.shiftKey) dropItem(n); else useItem(n); this.renderInv(); if(!G.p.inv.length) this.closeOverlay(); e.preventDefault(); }
       return;
     }
+    if(this.open==='ach'){ if(code==='Escape'){ this.showTitle(); e.preventDefault(); } return; }
     if(this.open==='shop'){
       if(code==='Escape'){ this.closeOverlay(); e.preventDefault(); return; }
       const d=code.match(/^(?:Digit|Numpad)(\d)$/); if(d){ const n=d[1]==='0'?9:parseInt(d[1])-1; buyItem(n); this.renderShop(); e.preventDefault(); }
@@ -100,7 +101,8 @@ const UI={
   toggleInv(){ if(G.state!=='play') return; if(this.open==='inv') this.closeOverlay(); else { this.open='inv'; this.renderInv(); this.el.overlay.hidden=false; } },
   renderInv(){
     const p=G.p; const E=this.el;
-    const row=(d,i)=>{ let act='',stat=''; if(d.kind==='weapon'){act='Взять';stat=`+${d.atk} атк`;} else if(d.kind==='armor'){act='Надеть';stat=`+${d.def} защ`;} else if(d.kind==='scroll'){act='Прочитать';stat=d.desc;} else {act=d.kind==='food'?'Съесть':'Выпить';stat=d.desc;}
+    const row=(d,i)=>{ let act='',stat=''; if(d.kind==='weapon'){act='Взять';stat=`+${d.atk} атк`;} else if(d.kind==='armor'){act='Надеть';stat=`+${d.def} защ`;} else if(d.kind==='scroll'){act='Прочитать';stat=d.desc;} else if(d.kind==='throw'){act='Кинуть';stat=d.desc;} else if(d.kind==='key'){act='';stat=d.desc;} else {act=d.kind==='food'?'Съесть':'Выпить';stat=d.desc;}
+      if(!act) return `<div class="row"><span class="num"></span>${this.icon(d.spr)}<div class="nm">${d.name}<small>${stat}</small></div><button class="drop" data-drop="${i}" title="Выбросить">✕</button></div>`;
       return `<div class="row"><span class="num">${isTouch?'':'['+((i+1)%10)+']'}</span>${this.icon(d.spr)}<div class="nm">${d.name}<small>${stat}</small></div><button data-use="${i}">${act}</button><button class="drop" data-drop="${i}" title="Выбросить">✕</button></div>`; };
     const ab=p.cls.ab;
     E.overlay.innerHTML=`<div class="panel inv">
@@ -133,6 +135,30 @@ const UI={
     E.overlay.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>{ sellItem(+b.dataset.sell); this.renderShop(); });
     E.overlay.querySelector('.close').onclick=()=>this.closeOverlay();
   },
+  openGym(){
+    const m=G.map,p=G.p,E=this.el; if(!m.gym||G.state!=='play') return;
+    this.open='gym'; E.overlay.hidden=false; AU.sfx('door');
+    const price=25+G.floor*15;
+    if(m.gym.used){ E.overlay.innerHTML=`<div class="panel inv"><h2>${this.icon('barbell')}Качалка</h2><div class="zina">Качок: «Абонемент на сегодня использован. Приходи этажом ниже.»</div><button class="big close">Уйти</button></div>`; }
+    else E.overlay.innerHTML=`<div class="panel inv"><h2>${this.icon('barbell')}Качалка «Титан» <small>у тебя ${p.gold} ₽</small></h2>
+      <div class="zina">Качок: «Абонемент ${price} ₽. Одно занятие. Что качаем?»</div>
+      <div class="list">
+        <div class="row">${this.icon('armatura')}<div class="nm">Железо<small>+1 атака навсегда</small></div><span class="price ${p.gold<price?'no':''}">${price} ₽</span><button data-gym="atk" ${p.gold<price?'disabled':''}>Качать</button></div>
+        <div class="row">${this.icon('kefir')}<div class="nm">Пресс<small>+6 к максимуму HP</small></div><span class="price ${p.gold<price?'no':''}">${price} ₽</span><button data-gym="hp" ${p.gold<price?'disabled':''}>Качать</button></div>
+      </div><button class="big close">Уйти</button></div>`;
+    E.overlay.querySelectorAll('[data-gym]').forEach(b=>b.onclick=()=>gymBuy(b.dataset.gym));
+    E.overlay.querySelector('.close').onclick=()=>this.closeOverlay();
+  },
+  toast(def){
+    const E=this.el; E.toast.innerHTML=`${this.icon(def.spr)}<div><b>Достижение: ${def.name}</b><small>${def.desc}</small></div>`;
+    E.toast.className='show'; clearTimeout(this._tt); this._tt=setTimeout(()=>{E.toast.className='';},3500);
+  },
+  showAch(){
+    const E=this.el; const got=loadAch(); const n=Object.keys(got).filter(k=>ACH.some(a=>a.id===k)).length;
+    this.open='ach'; E.overlay.hidden=false;
+    E.overlay.innerHTML=`<div class="panel inv"><h2>Достижения <small>${n}/${ACH.length}</small></h2><div class="list">${ACH.map(a=>`<div class="row ${got[a.id]?'':'locked'}">${this.icon(a.spr)}<div class="nm">${a.name}<small>${a.desc}</small></div><span class="price">${got[a.id]?'✔':'·'}</span></div>`).join('')}</div><button class="big close">Назад</button></div>`;
+    E.overlay.querySelector('.close').onclick=()=>this.showTitle();
+  },
   closeOverlay(){ this.open=null; this.el.overlay.hidden=true; this.el.overlay.innerHTML=''; },
   showTitle(){
     const b=loadBest(); const E=this.el; this.open='title'; G.state='title'; AU.setBoss(false);
@@ -150,6 +176,7 @@ const UI={
       ${saved?`<button class="big cont">Продолжить: ${clsName(saved.p.cls)}, этаж ${saved.floor}</button>`:''}
       <button class="big start">Спуститься</button>
       <button class="big daily">Забег дня</button>
+      <button class="big ghost achb">Достижения ${Object.keys(loadAch()).filter(k=>ACH.some(a=>a.id===k)).length}/${ACH.length}</button>
       ${b.runs?`<div class="best">Лучший этаж: ${b.floor} · рекорд: ${b.score} · забегов: ${b.runs}${b.wins?' · побед: '+b.wins:''}</div>`:''}
       ${runs.length?`<div class="runs">${runs.map(r=>`<div><span>${clsName(r.cls)}</span><span>${r.win?'<b>победа</b>':'этаж '+r.floor+', '+r.cause}</span><span>${r.score}${r.daily?' ☀':''}</span></div>`).join('')}</div>`:''}
       <div class="help">${isTouch?'Тап по клетке: идти. Свайп: шаг. Тап по себе: ждать.<br>Враг рядом: шагни в него.':'WASD / стрелки / нумпад: шаг. QEZC: по диагонали.<br>Пробел: ждать · Enter: спуск · F: способность · I: рюкзак (в нём цифры = предметы) · X: обшарить · Tab: миникарта · V: только видимое'}</div>
@@ -160,6 +187,7 @@ const UI={
     const start=(daily)=>{ AU.init(); this.closeOverlay(); E.hud.classList.remove('hidden'); newGame(this.cls,daily); };
     E.overlay.querySelector('.start').onclick=()=>start(false);
     E.overlay.querySelector('.daily').onclick=()=>start(true);
+    E.overlay.querySelector('.achb').onclick=()=>this.showAch();
     const cont=E.overlay.querySelector('.cont'); if(cont) cont.onclick=()=>{ AU.init(); this.closeOverlay(); if(!loadRun()) this.showTitle(); };
   },
   endPanel(title,lines){

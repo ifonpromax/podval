@@ -66,6 +66,11 @@
   .runs{font-size:7px;color:var(--dim);margin:8px 0;line-height:2}
   .runs div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line)}
   .runs b{color:var(--gold)}
+  #toast{position:fixed;left:50%;top:calc(60px + env(safe-area-inset-top));transform:translate(-50%,-20px);background:var(--panel);border:2px solid var(--gold);box-shadow:0 0 0 2px #000,0 0 20px #000;padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:9px;line-height:1.6;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;z-index:6;max-width:90vw}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #toast b{color:var(--gold)}#toast small{display:block;color:var(--dim);font-size:7px}
+  #toast img.ic{width:32px;height:32px;margin:0}
+  .inv .row.locked{opacity:.4}
   @media (max-width:420px){ .classes{grid-template-columns:repeat(2,1fr)} }
   #banner{position:fixed;left:0;right:0;top:28%;text-align:center;pointer-events:none;opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s;text-shadow:2px 2px 0 #000,0 0 20px #000}
   #banner.show{opacity:1;transform:none}
@@ -133,6 +138,7 @@
   </div>
 </div>
 <div id="banner"><div id="banner-t"></div><div id="banner-s"></div></div>
+<div id="toast"></div>
 <div id="overlay" hidden></div>
 <script src="js/core.js"></script>
 <script src="js/data.js"></script>

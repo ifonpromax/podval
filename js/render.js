@@ -95,8 +95,11 @@ function draw(){
       else if(t===T.DOOR_OPEN) g.drawImage(sprCanvas('door_open'),px,py,tz,tz);
       else if(t===T.STAIRS){ g.drawImage(sprCanvas('stairs'),px,py,tz,tz); if(m.vis[i]){ g.fillStyle=`rgba(243,197,58,${0.15+Math.sin(RD.time*4)*0.1})`; g.fillRect(px,py,tz,tz);} }
       else if(t===T.CRATE) g.drawImage(sprCanvas('crate'),px,py,tz,tz);
+      else if(t===T.LOCKED) g.drawImage(sprCanvas('locked'),px,py,tz,tz);
+      else if(t===T.GYM) g.drawImage(sprCanvas('barbell'),px,py,tz,tz);
+      else if(m.decor[i]>=10) g.drawImage(sprCanvas(DECOR_ABS[m.decor[i]]),px,py,tz,tz);
       else if(t===T.KIOSK){ g.drawImage(sprCanvas('kiosk'),px,py,tz,tz); if(m.vis[i]&&Math.sin(RD.time*6)>0){ g.fillStyle='rgba(243,197,58,0.25)'; g.fillRect(px+sc,py+sc,tz-2*sc,sc*3); } }
-      else if(m.decor[i]){ const d=THEMES[G.floor].decor[m.decor[i]-1]; g.drawImage(sprCanvas(d),px,py,tz,tz); }
+      else if(m.decor[i]&&m.decor[i]<10){ const d=THEMES[G.floor].decor[m.decor[i]-1]; g.drawImage(sprCanvas(d),px,py,tz,tz); }
     }
   }
   for(const t of G.traps){ if(!t.seen||!shown(idx(t.x,t.y))) continue; g.drawImage(sprCanvas(TRAPS[t.kind].spr),sx(t.x),sy(t.y),tz,tz); if(t.kind==='wire'&&m.vis[idx(t.x,t.y)]&&Math.random()<0.1){ g.fillStyle='#aef'; g.fillRect(sx(t.x)+sc*4,sy(t.y)+sc*9,sc,sc);} }
@@ -131,7 +134,7 @@ function draw(){
   for(const a of G.mons){ if(!m.vis[idx(a.x,a.y)]) continue; drawActor(a); }
   if(G.state!=='dead') drawActor(p);
   else { g.save(); g.translate(sx(p.vx)+tz/2,sy(p.vy)+tz/2); g.rotate(Math.PI/2); g.drawImage(sprCanvas('player'),-tz/2,-tz/2,tz,tz); g.restore(); }
-  if(FX.proj){ const q=FX.proj; const x=lerp(q.x,q.tx,q.t),y=lerp(q.y,q.ty,q.t)-Math.sin(q.t*Math.PI)*0.7; g.fillStyle='#5a3620'; g.fillRect(sx(x)+tz*0.3,sy(y)+tz*0.3,tz*0.4,tz*0.4); g.fillStyle='#8a5a3a'; g.fillRect(sx(x)+tz*0.35,sy(y)+tz*0.35,tz*0.2,tz*0.2); }
+  if(FX.proj){ const q=FX.proj; const x=lerp(q.x,q.tx,q.t),y=lerp(q.y,q.ty,q.t)-Math.sin(q.t*Math.PI)*0.7; g.fillStyle=q.color||'#5a3620'; g.fillRect(sx(x)+tz*0.3,sy(y)+tz*0.3,tz*0.4,tz*0.4); g.fillStyle='#8a5a3a'; g.fillRect(sx(x)+tz*0.35,sy(y)+tz*0.35,tz*0.2,tz*0.2); }
   for(const q of FX.parts){ g.globalAlpha=1-q.t/q.life; g.fillStyle=q.color; g.fillRect(sx(q.x),sy(q.y),q.sz*sc,q.sz*sc); } g.globalAlpha=1;
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
     const i=idx(x,y); if(!shown(i)) continue; const px=sx(x),py=sy(y);
@@ -148,7 +151,7 @@ function draw(){
     const TH=THEMES[G.floor];
     for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
       const i=idx(x,y); if(!shown(i)) continue; const t=m.t[i]; let c;
-      if(t===T.WALL) c=TH.wallTop; else if(t===T.DOOR||t===T.DOOR_OPEN) c='#c08a40'; else if(t===T.STAIRS) c='#f3c53a'; else if(t===T.KIOSK) c='#5ad0e8'; else c=TH.floor;
+      if(t===T.WALL) c=TH.wallTop; else if(t===T.DOOR||t===T.DOOR_OPEN) c='#c08a40'; else if(t===T.LOCKED) c='#f3c53a'; else if(t===T.STAIRS) c='#f3c53a'; else if(t===T.KIOSK||t===T.GYM) c='#5ad0e8'; else c=TH.floor;
       g.globalAlpha=m.vis[i]?1:0.55; g.fillStyle=c; g.fillRect(mx+x*ms,my+y*ms,ms,ms);
     }
     g.globalAlpha=1;
