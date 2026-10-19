@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#07070c">
+<title>ПОДВАЛ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{ --bg:#07070c; --panel:#15131e; --line:#2b2838; --text:#e8e4d8; --dim:#8a8798; --gold:#f3c53a; --red:#d2383c; --green:#4caf50; --blue:#5ad0e8; --font:"Press Start 2P",monospace; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+  canvas#game{position:fixed;inset:0;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+  img.ic{image-rendering:pixelated;width:28px;height:28px;vertical-align:middle;margin-right:6px}
+  #hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:10px;padding-top:calc(10px + env(safe-area-inset-top));padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+  #hud.hidden{display:none}
+  #top{display:flex;gap:10px;align-items:flex-start;font-size:9px}
+  #top>*{pointer-events:auto}
+  .bars{width:170px;display:flex;flex-direction:column;gap:5px}
+  .bar{position:relative;height:16px;background:#1b1826;border:2px solid var(--line);overflow:hidden}
+  .bar>div{height:100%;background:var(--red);transition:width .2s}
+  .bar>div.warn{background:#e07a2c}.bar>div.crit{background:#ff3030;animation:blink .6s steps(2) infinite}
+  .bar.xp{height:10px}.bar.xp>div{background:var(--gold)}
+  .bar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;text-shadow:1px 1px 0 #000;line-height:1}
+  @keyframes blink{50%{opacity:.5}}
+  #mid{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9px;color:var(--dim);text-shadow:1px 1px 0 #000}
+  #floor{font-size:9px;line-height:1.6;text-shadow:1px 1px 0 #000}
+  #right{margin-left:auto;text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  #gold{color:var(--gold);text-shadow:1px 1px 0 #000}
+  #ad{display:flex;gap:10px;color:var(--dim);text-shadow:1px 1px 0 #000}
+  #equip{display:flex;gap:4px}#equip img.ic{margin:0;width:24px;height:24px;background:#1b1826;border:2px solid var(--line)}
+  .slot{width:24px;height:24px;background:#1b1826;border:2px solid var(--line);display:inline-block}
+  #b-sound{pointer-events:auto;background:none;border:2px solid var(--line);color:var(--dim);font:12px var(--font);width:28px;height:28px;padding:0;cursor:pointer}
+  #b-sound.off{text-decoration:line-through}
+  #status{display:flex;gap:6px;justify-content:center;padding:4px 0}
+  .st{font-size:9px;padding:3px 5px;border:2px solid var(--line);background:#1b1826cc}
+  #bossbar{width:min(360px,70vw);text-align:center;color:var(--red);font-size:10px;text-shadow:1px 1px 0 #000;margin-top:4px}
+  #bossbar[hidden]{display:none}
+  #bossbar .bar{height:10px;margin-top:5px;border-color:#5a1a1a}#bossbar .bar>div{background:linear-gradient(#ff5a5a,#a01a1a)}
+  .st.poison{color:var(--green)}.st.drunk{color:#e07a2c}.st.energy{color:var(--blue)}
+  #bottom{display:flex;flex-direction:column;gap:8px}
+  #log{font-size:9px;line-height:1.7;max-height:112px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;text-shadow:1px 1px 0 #000,0 0 6px #000}
+  #log .m{opacity:1}
+  #log .m.old{opacity:.55}
+  #log .bad{color:#ff8a8a}#log .good{color:#9ae69a}#log .gold{color:var(--gold)}#log .sys{color:var(--blue)}#log .lvl{color:var(--gold)}#log .talk{color:#f0d0a0;font-style:italic}
+  #btns{display:flex;gap:8px;pointer-events:auto}
+  #btns button,.panel button{font:10px var(--font);color:var(--text);background:var(--panel);border:2px solid var(--line);box-shadow:inset -2px -2px 0 #000,inset 2px 2px 0 #3a3650;padding:12px 10px;cursor:pointer;flex:1;line-height:1}
+  #btns button:active,.panel button:active{box-shadow:inset 2px 2px 0 #000;transform:translateY(1px)}
+  #b-down{background:#5a4a10;border-color:var(--gold);color:var(--gold)}
+  #banner{position:fixed;left:0;right:0;top:28%;text-align:center;pointer-events:none;opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s;text-shadow:2px 2px 0 #000,0 0 20px #000}
+  #banner.show{opacity:1;transform:none}
+  #banner-t{font-size:clamp(16px,4vw,30px);color:var(--text)}
+  #banner-s{font-size:clamp(8px,2vw,12px);color:var(--dim);margin-top:12px}
+  #banner.boss #banner-t{color:var(--red);animation:shake .3s}
+  @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  #overlay{position:fixed;inset:0;background:rgba(5,5,10,.8);display:flex;align-items:center;justify-content:center;padding:16px;z-index:5}
+  #overlay[hidden]{display:none}
+  .panel{background:var(--panel);border:3px solid var(--line);box-shadow:0 0 0 3px #000,0 0 40px #000;padding:20px;width:100%;max-width:440px;max-height:95vh;overflow:auto;text-align:center;font-size:10px;line-height:1.8}
+  .panel p{margin:12px 0;color:#c8c4b8}
+  .panel .logo{font-size:clamp(28px,8vw,44px);color:var(--gold);text-shadow:4px 4px 0 #6b2a1a,0 0 30px #a0601a;letter-spacing:2px;margin:10px 0 6px}
+  .panel .logo.small{font-size:clamp(18px,5vw,26px);color:var(--red);text-shadow:3px 3px 0 #400}
+  .panel .tag{color:var(--dim);font-size:8px;margin-bottom:14px}
+  .panel .hero{display:flex;justify-content:center;gap:6px;margin:10px 0}
+  .panel .hero img.ic{width:44px;height:44px;margin:0}
+  .panel .best{color:var(--gold);font-size:8px;margin:10px 0}
+  .panel .help{color:var(--dim);font-size:8px;margin-top:14px;line-height:1.9}
+  .panel .stats{color:var(--dim);font-size:8px;margin:10px 0;line-height:2}
+  .panel button.big{display:block;width:100%;margin-top:10px;padding:14px;font-size:12px}
+  .panel button.start{background:#3a4a1a;border-color:#8ab040;color:#d0f090}
+  .panel button.ghost{background:transparent}
+  .panel h2{font-size:12px;margin:0 0 10px}.panel h2 small{color:var(--dim);font-size:9px}
+  .inv{text-align:left}
+  .inv .eq{display:flex;gap:8px;margin-bottom:8px}.inv .eq>div{flex:1;background:#1b1826;border:2px solid var(--line);padding:6px;font-size:9px;display:flex;align-items:center;min-height:44px}
+  .inv .eq small,.inv .nm small{display:block;color:var(--dim);font-size:7px;margin-top:3px}
+  .inv .list{margin:8px 0}
+  .inv .row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .inv .row .num{color:var(--dim);width:14px;font-size:9px}
+  .inv .row .nm{flex:1;font-size:9px}
+  .inv .row button{flex:0;padding:10px 8px;white-space:nowrap}
+  .inv .row button.drop{color:var(--dim);padding:10px 6px}
+  .dim{color:var(--dim)}
+  .shop .zina{font-size:9px;color:#f0d0a0;font-style:italic;margin:6px 0 10px;display:flex;align-items:center;gap:6px}
+  .shop .price{color:var(--gold);font-size:9px;white-space:nowrap}.shop .price.no{color:#ff8a8a}
+  .shop button[disabled]{opacity:.4;cursor:default}
+  @media (max-width:600px){ .bars{width:130px} #log{max-height:96px;font-size:8px} #btns button{padding:14px 6px;font-size:9px} #ad{display:none} }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud" class="hidden">
+  <div id="top">
+    <div class="bars">
+      <div class="bar"><div id="hpfill"></div><span id="hptext"></span></div>
+      <div class="bar xp"><div id="xpfill"></div><span id="lvl"></span></div>
+    </div>
+    <div id="floor"></div>
+    <div id="right">
+      <div style="display:flex;gap:8px;align-items:center"><div id="gold"></div><button id="b-sound" title="Звук (M)">♪</button></div>
+      <div id="ad"><span id="atk"></span><span id="def"></span></div>
+      <div id="equip"></div>
+    </div>
+  </div>
+  <div id="mid"><div id="status"></div><div id="bossbar" hidden><div id="boss-name"></div><div class="bar boss"><div id="boss-fill"></div></div></div></div>
+  <div id="bottom">
+    <div id="log"></div>
+    <div id="btns">
+      <button id="b-inv">Рюкзак</button>
+      <button id="b-wait">Ждать</button>
+      <button id="b-explore">Обшарить</button>
+      <button id="b-down" hidden>Спуститься</button>
+    </div>
+  </div>
+</div>
+<div id="banner"><div id="banner-t"></div><div id="banner-s"></div></div>
+<div id="overlay" hidden></div>
+<script src="js/core.js"></script>
+<script src="js/data.js"></script>
+<script src="js/map.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script>if(location.search.includes('dev')){const s=document.createElement('script');s.src='js/bot.js';document.body.appendChild(s);}</script>
+</body>
+</html>
