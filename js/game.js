@@ -296,7 +296,7 @@ function addFloat(x,y,text,color){ FX.floats.push({x,y,text,color,t:0}); }
 function spawnParts(x,y,color,n){ for(let i=0;i<n;i++){ const a=R.f()*Math.PI*2,s=0.5+R.f()*2.5; FX.parts.push({x:x+0.5,y:y+0.5,vx:Math.cos(a)*s,vy:Math.sin(a)*s-1.5,color,t:0,life:0.4+R.f()*0.5,sz:1+R.i(0,1)}); } }
 
 // ---- auto-walk / explore ----
-function monsterVisible(){ const m=G.map; return G.mons.some(a=>m.vis[idx(a.x,a.y)]); }
+function monsterVisible(){ const m=G.map; return G.mons.some(a=>m.vis[idx(a.x,a.y)]&&(a.state!=='sleep'||cheb(a,G.p)<=2)); }
 function setPathTo(tx,ty,quiet){
   const m=G.map,p=G.p;
   if(!m.seen[idx(tx,ty)]){ if(!quiet) msg('Ты там ещё не был.'); return false; }
