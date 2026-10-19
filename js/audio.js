@@ -45,6 +45,11 @@ const AU={ctx:null,on:true,master:null,ambOn:false,dripTimer:null,
       case 'win': [523,659,784,1047,1319].forEach((f,i)=>this.tone(f,0.3,'square',0.09,0,i*0.15)); break;
     }
   },
+  setBoss(on){
+    if(on===this.bossOn) return; this.bossOn=on;
+    if(on){ let i=0; this.bossTimer=setInterval(()=>{ if(!this.ctx||!this.on||G.state!=='play') return; const f=[55,55,65,49,55,55,73,65][i++%8]; this.tone(f,0.22,'sawtooth',0.11); if(i%2===0) this.noise(0.05,0.07,0,180); },300); }
+    else { clearInterval(this.bossTimer); this.bossTimer=null; }
+  },
   startAmbient(){
     const c=this.ctx; if(!c||this.ambOn) return; this.ambOn=true;
     const o=c.createOscillator(); o.type='sawtooth'; o.frequency.value=41;

@@ -49,6 +49,22 @@
   #btns button,.panel button{font:10px var(--font);color:var(--text);background:var(--panel);border:2px solid var(--line);box-shadow:inset -2px -2px 0 #000,inset 2px 2px 0 #3a3650;padding:12px 10px;cursor:pointer;flex:1;line-height:1}
   #btns button:active,.panel button:active{box-shadow:inset 2px 2px 0 #000;transform:translateY(1px)}
   #b-down{background:#5a4a10;border-color:var(--gold);color:var(--gold)}
+  #btns button{padding:12px 4px;font-size:8px}
+  #b-ab{background:#1e3a4a;border-color:#3a8aa8;color:#9ae0f0}#b-ab.cd{opacity:.5}
+  .st.lives{color:#ff8ab0}
+  .classes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
+  .cls{background:#1b1826;border:2px solid var(--line);padding:8px 4px;cursor:pointer;font-size:7px;line-height:1.5}
+  .cls.sel{border-color:var(--gold);background:#2a2418}
+  .cls img.ic{width:40px;height:40px;margin:0 0 4px}
+  .cls .cn{color:var(--text);font-size:8px}.cls .cs{color:var(--dim);font-size:6px;margin-top:3px}
+  .cdesc{font-size:8px;color:#c8c4b8;line-height:1.9;min-height:44px;margin:4px 0 8px}.cdesc .ab{color:#9ae0f0}
+  .panel button.cont{background:#1e3a4a;border-color:#3a8aa8;color:#9ae0f0}
+  .panel button.daily{background:#3a2a10;border-color:#a07020;color:#f0c060}
+  .panel button.share{background:#2a2a4a;border-color:#6060b0;color:#c0c0ff}
+  .runs{font-size:7px;color:var(--dim);margin:8px 0;line-height:2}
+  .runs div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line)}
+  .runs b{color:var(--gold)}
+  @media (max-width:420px){ .classes{grid-template-columns:repeat(2,1fr)} }
   #banner{position:fixed;left:0;right:0;top:28%;text-align:center;pointer-events:none;opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s;text-shadow:2px 2px 0 #000,0 0 20px #000}
   #banner.show{opacity:1;transform:none}
   #banner-t{font-size:clamp(16px,4vw,30px);color:var(--text)}
@@ -109,6 +125,7 @@
       <button id="b-inv">Рюкзак</button>
       <button id="b-wait">Ждать</button>
       <button id="b-explore">Обшарить</button>
+      <button id="b-ab">Способность</button>
       <button id="b-down" hidden>Спуститься</button>
     </div>
   </div>

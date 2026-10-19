@@ -56,6 +56,8 @@ function makeMap(floor){
       if(R.chance(0.09)) m.decor[i]=R.i(1,4);
     }
   }
+  // graffiti on wall faces (walls with floor below)
+  for(let y=0;y<MH-1;y++)for(let x=0;x<MW;x++){ const i=idx(x,y); if(m.t[i]===T.WALL&&m.t[idx(x,y+1)]!==T.WALL&&R.chance(0.07)) m.decor[i]=R.i(1,3); }
   // start & stairs
   const start=rooms[0]; m.start={x:start.cx,y:start.cy};
   let d=bfsMap(m,start.cx,start.cy,()=>true);

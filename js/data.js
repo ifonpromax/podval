@@ -21,6 +21,8 @@ const MON={
  plumber: {name:'Сантехник',      spr:'plumber', hp:18,atk:5,def:1,spd:100,xp:16,minF:4,maxF:8, w:7, a:'бьёт ключом'},
  mrat:    {name:'Крыса-мутант',   spr:'mrat',    hp:20,atk:5,def:1,spd:150,xp:18,minF:5,maxF:8, w:6, animal:true, a:'грызёт'},
  ghost:   {name:'Призрак жильца', spr:'ghost',   hp:12,atk:4,def:2,spd:90, xp:20,minF:6,maxF:8, w:5, ghost:true, a:'воет на'},
+ drill:   {name:'Сосед с перфоратором',spr:'drill',hp:12,atk:4,def:0,spd:90,xp:11,minF:2,maxF:6,w:6,loud:true, a:'сверлит'},
+ collector:{name:'Коллектор',     spr:'collector',hp:24,atk:6,def:2,spd:100,xp:24,minF:6,maxF:8,w:6,steal:true,bigSteal:true, a:'выбивает долг из'},
  dvornik: {name:'Дворник',        spr:'dvornik', hp:50,atk:6,def:1,spd:100,xp:60,boss:true, a:'метёт'},
  upravdom:{name:'Управдом',       spr:'upravdom',hp:120,atk:9,def:3,spd:100,xp:200,boss:true,summon:true, a:'начисляет пени'},
 };
@@ -65,5 +67,19 @@ const FLAVOR={
   dvornik:[ 'Намусорили тут!', 'Я с пяти утра на ногах!', 'Щас как размету!' ],
   upravdom:[ 'У вас долг за капремонт.', 'Квитанция придёт в понедельник.', 'Пеня начислена.', 'Крысы, фас!' ],
   ghost:[ 'Я… жил… в пятой…', 'Отключили… газ…', 'Верните… двушку…' ],
+  drill:[ 'БЗЗЗЗЗЗЗ!', 'Я в субботу в семь утра сверлю, понял?', 'Ремонт на месяц, потерпите.' ],
+  collector:[ 'Вы задолжали банку.', 'Мы знаем, где живёт твоя мать.', 'Долг платежом красен.' ],
   zina:[ 'Чё надо? Сдачи нет.', 'Кефир свежий, вчерашний.', 'Бери, не раздумывай.', 'Карту не принимаю, только мелочь.', 'Ты с какой квартиры?' ],
+};
+
+const CLASSES=[
+ {id:'vasyan',  name:'Васян',        spr:'player',  hp:22,atk:3,def:0,spd:100,desc:'Обычный пацан с района. Ровный во всём.',          start:['kefir'],            ab:{name:'С ноги',  key:'kick', cd:8, desc:'двойной удар, враг отлетает на 2 клетки'}},
+ {id:'mihalych',name:'Дед Михалыч',  spr:'mihalych',hp:32,atk:4,def:1,spd:85, desc:'Крепкий, но медленный. Телогрейка с 1979 года.',  start:['a1','boyara'],     ab:{name:'Стоять!', key:'shout',cd:14,desc:'все видимые враги замирают на 2 хода'}},
+ {id:'lyoha',   name:'Студент Лёха', spr:'lyoha',   hp:16,atk:2,def:0,spd:120,desc:'Быстрый и хилый. Опыт даётся легче (+25%).',      start:['energy','shaurma'],xpMul:1.25,ab:{name:'Рывок',key:'dash', cd:6, desc:'пробежать 3 клетки вперёд'}},
+ {id:'barsik',  name:'Кот Барсик',   spr:'barsik',  hp:14,atk:3,def:0,spd:130,desc:'Уворачивается от ударов, броню не носит, одна запасная жизнь.',start:['shaurma'],dodge:0.25,noArmor:true,lives:1,ab:{name:'Шипение',key:'hiss',cd:10,desc:'враги рядом разбегаются на 4 хода'}},
+];
+const TRAPS={
+ hatch:{name:'Открытый люк',  spr:'hatch', desc:'проваливаешься этажом ниже'},
+ wire: {name:'Оголённый провод',spr:'wire', desc:'бьёт током'},
+ board:{name:'Скрипучая половица',spr:'board',desc:'будит всех вокруг'},
 };

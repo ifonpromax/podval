@@ -76,6 +76,7 @@ function draw(){
     if(t===T.WALL){
       const below=y+1<MH&&m.t[idx(x,y+1)]!==T.WALL;
       g.drawImage(below?th.face:th.top,px,py,tz,tz);
+      if(below&&m.decor[i]) g.drawImage(sprCanvas('graf'+m.decor[i]),px,py,tz,tz);
       if(!below){
         g.fillStyle=th.edge;
         if(y>0&&m.t[idx(x,y-1)]!==T.WALL) g.fillRect(px,py,tz,sc);
@@ -97,6 +98,7 @@ function draw(){
       else if(m.decor[i]){ const d=THEMES[G.floor].decor[m.decor[i]-1]; g.drawImage(sprCanvas(d),px,py,tz,tz); }
     }
   }
+  for(const t of G.traps){ if(!t.seen||!m.seen[idx(t.x,t.y)]) continue; g.drawImage(sprCanvas(TRAPS[t.kind].spr),sx(t.x),sy(t.y),tz,tz); if(t.kind==='wire'&&m.vis[idx(t.x,t.y)]&&Math.random()<0.1){ g.fillStyle='#aef'; g.fillRect(sx(t.x)+sc*4,sy(t.y)+sc*9,sc,sc);} }
   for(const it of G.items){
     const i=idx(it.x,it.y); if(!m.seen[i]||it.x<x0||it.x>x1||it.y<y0||it.y>y1) continue;
     const bob=m.vis[i]?Math.round(Math.sin(RD.time*3+it.x*1.7)*0.5+0.5)*sc:0;
@@ -112,6 +114,8 @@ function draw(){
     if(a.face<0){ g.translate(px+tz,py); g.scale(-1,1); g.drawImage(sprCanvas(a.spr),0,0,tz,tz); if(a.flash>0){ g.globalAlpha=clamp(a.flash,0,1); g.drawImage(sprWhite(a.spr),0,0,tz,tz);} }
     else { g.drawImage(sprCanvas(a.spr),px,py,tz,tz); if(a.flash>0){ g.globalAlpha=clamp(a.flash,0,1); g.drawImage(sprWhite(a.spr),px,py,tz,tz);} }
     g.restore();
+    if(!a.isPlayer&&a.stun>0){ g.fillStyle='#f3c53a'; g.font=`${sc*3}px monospace`; g.textAlign='left'; g.fillText('*',px+tz*0.7,py+sc*2+Math.sin(RD.time*6)*sc); }
+    if(!a.isPlayer&&a.flee>0){ g.fillStyle='#ff8a8a'; g.font=`${sc*3}px monospace`; g.textAlign='left'; g.fillText('!',px+tz*0.7,py+sc*2); }
     if(!a.isPlayer&&a.state==='sleep'){ g.fillStyle='#cfd0da'; g.font=`${sc*3}px monospace`; g.textAlign='left'; g.fillText('z',px+tz*0.75,py+sc*2+Math.sin(RD.time*2)*sc); }
     if(!a.isPlayer&&a.hp<a.hpMax){ const bw=tz*0.8,bx=px+tz*0.1,by=py-sc*1.5; g.fillStyle='#14121c'; g.fillRect(bx-1,by-1,bw+2,sc+2); g.fillStyle=a.boss?'#f3c53a':'#d2383c'; g.fillRect(bx,by,bw*a.hp/a.hpMax,sc); }
   };
@@ -140,6 +144,7 @@ function draw(){
     }
     g.globalAlpha=1;
     for(const it of G.items){ if(m.seen[idx(it.x,it.y)]){ g.fillStyle=it.def.kind==='gold'?'#f3c53a':'#ffffff'; g.fillRect(mx+it.x*ms,my+it.y*ms,ms,ms); } }
+    for(const t of G.traps){ if(t.seen&&m.seen[idx(t.x,t.y)]){ g.fillStyle='#ff9040'; g.fillRect(mx+t.x*ms,my+t.y*ms,ms,ms); } }
     for(const a of G.mons){ if(m.vis[idx(a.x,a.y)]){ g.fillStyle=a.boss?'#ff40ff':'#ff4040'; g.fillRect(mx+a.x*ms,my+a.y*ms,ms,ms); } }
     if(Math.sin(RD.time*8)>-0.3){ g.fillStyle='#ffffff'; g.fillRect(mx+p.x*ms-1,my+p.y*ms-1,ms+2,ms+2); }
   }
